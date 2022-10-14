@@ -984,6 +984,10 @@ func (rs *Store) flushMetadata(db dbm.DB, version int64, cInfo *types.CommitInfo
 	rs.logger.Debug("flushing metadata finished", "height", version)
 }
 
+func (s *Store) GetAppHash() []byte {
+	return s.LastCommitID().Hash
+}
+
 type storeParams struct {
 	key            types.StoreKey
 	db             dbm.DB

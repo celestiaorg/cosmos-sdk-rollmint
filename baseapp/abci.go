@@ -19,6 +19,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	snapshottypes "github.com/cosmos/cosmos-sdk/snapshots/types"
+	"github.com/cosmos/cosmos-sdk/store/rootmulti"
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
@@ -129,6 +130,24 @@ func (app *BaseApp) Info(req abci.RequestInfo) abci.ResponseInfo {
 		LastBlockHeight:  lastCommitID.Version,
 		LastBlockAppHash: lastCommitID.Hash,
 	}
+}
+
+func (app *BaseApp) GetAppHash(req abci.RequestGetAppHash) (res abci.ResponseGetAppHash) {
+	cms := app.cms.(*rootmulti.Store)
+
+	appHash := cms.GetAppHash()
+	res = abci.ResponseGetAppHash{
+		AppHash: appHash,
+	}
+	return res
+}
+
+func (app *BaseApp) GenerateFraudProof(req abci.RequestGenerateFraudProof) (res abci.ResponseGenerateFraudProof) {
+	return abci.ResponseGenerateFraudProof{}
+}
+
+func (app *BaseApp) VerifyFraudProof(req abci.RequestVerifyFraudProof) (res abci.ResponseVerifyFraudProof) {
+	return abci.ResponseVerifyFraudProof{}
 }
 
 // BeginBlock implements the ABCI application interface.
