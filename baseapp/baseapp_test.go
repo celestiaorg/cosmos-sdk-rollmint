@@ -2326,8 +2326,9 @@ func TestGenerateAndLoadFraudProof(t *testing.T) {
 	// BaseApp, B1
 	appB1 := setupBaseApp(t,
 		routerOpt,
-		SetSubstoreTracer(storeTraceBuf),
-		SetTracerFor(capKey2.Name(), subStoreTraceBuf),
+		// TODO: Write IAVL equivalent options somehow
+		// SetSubstoreTracer(storeTraceBuf),
+		// SetTracerFor(capKey2.Name(), subStoreTraceBuf),
 	)
 
 	// B1 <- S0
@@ -2350,15 +2351,16 @@ func TestGenerateAndLoadFraudProof(t *testing.T) {
 	executeBlockWithRequests(t, appB1, beginRequest, nonFraudulentDeliverRequests, nil, 0)
 
 	// Save appHash, substoreHash here for comparision later
-	appHashB1, err := appB1.cms.(*multi.Store).GetAppHash()
-	require.Nil(t, err)
-	storeHashB1 := appB1.cms.(*multi.Store).GetSubstoreSMT(capKey2.Name()).Root()
+	appHashB1 := appB1.cms.(*rootmulti.Store).GetAppHash()
 
-	routerOpts := make(map[string]AppOptionFunc)
+	//TODO: Write iavl equivalent somehow
+	// storeHashB1 := appB1.cms.(*multi.Store).GetSubstoreSMT(capKey2.Name()).Root()
+
+	routerOpts := make(map[string]func(*BaseApp))
 	newRouterOpt := func(bapp *BaseApp) {
 		bapp.Router().AddRoute(sdk.NewRoute(routeMsgKeyValue, func(ctx sdk.Context, msg sdk.Msg) (*sdk.Result, error) {
 			kv := msg.(*msgKeyValue)
-			cms := bapp.cms.(*multi.Store)
+			cms := bapp.cms.(*rootmulti.Store)
 			sKeys := cms.GetStoreKeys()
 			largestKey := sKeys[0]
 			for _, sKey := range sKeys[1:] {
@@ -2372,6 +2374,7 @@ func TestGenerateAndLoadFraudProof(t *testing.T) {
 	}
 	routerOpts[capKey2.Name()] = newRouterOpt
 
+	// THINK: No routerOpts in this baseapp version, how do I bypass this requirement?
 	resp := appB1.generateFraudProofWithRouterOpts(
 		abci.RequestGenerateFraudProof{
 			BeginBlockRequest: *beginRequest, DeliverTxRequests: append(nonFraudulentDeliverRequests, fraudDeliverRequest), EndBlockRequest: nil,
@@ -2396,6 +2399,6 @@ func TestGenerateAndLoadFraudProof(t *testing.T) {
 	appB2Hash, err := appB2.cms.(*multi.Store).GetAppHash()
 	require.Nil(t, err)
 	require.Equal(t, appHashB1, appB2Hash)
-	storeHashB2 := appB2.cms.(*multi.Store).GetSubstoreSMT(capKey2.Name()).Root()
-	require.Equal(t, storeHashB1, storeHashB2)
+	// storeHashB2 := appB2.cms.(*multi.Store).GetSubstoreSMT(capKey2.Name()).Root()
+	// require.Equal(t, storeHashB1, storeHashB2)
 }

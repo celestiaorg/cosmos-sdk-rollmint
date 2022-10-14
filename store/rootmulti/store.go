@@ -163,6 +163,14 @@ func (rs *Store) GetCommitKVStore(key types.StoreKey) types.CommitKVStore {
 	return rs.stores[key]
 }
 
+func (s *Store) GetStoreKeys() []types.StoreKey {
+	storeKeys := make([]types.StoreKey, 0, len(s.keysByName))
+	for _, sk := range s.keysByName {
+		storeKeys = append(storeKeys, sk)
+	}
+	return storeKeys
+}
+
 // StoreKeysByName returns mapping storeNames -> StoreKeys
 func (rs *Store) StoreKeysByName() map[string]types.StoreKey {
 	return rs.keysByName
