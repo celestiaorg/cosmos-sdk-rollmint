@@ -56,7 +56,7 @@ require (
 	github.com/tendermint/tm-db v0.6.7
 	golang.org/x/crypto v0.0.0-20220829220503-c86fa9a7ed90
 	golang.org/x/exp v0.0.0-20220722155223-a9213eeb770e
-	google.golang.org/genproto v0.0.0-20220815135757-37a418bb8959
+	google.golang.org/genproto v0.0.0-20221013201013-33fc6f83cba4
 	google.golang.org/grpc v1.50.0
 	google.golang.org/protobuf v1.28.1
 	pgregory.net/rapid v0.4.7
@@ -229,12 +229,12 @@ require (
 	go.uber.org/multierr v1.8.0 // indirect
 	go.uber.org/zap v1.23.0 // indirect
 	golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4 // indirect
-	golang.org/x/net v0.0.0-20220826154423-83b083e8dc8b // indirect
+	golang.org/x/net v0.0.0-20221012135044-0b7e1fb9d458 // indirect
 	golang.org/x/oauth2 v0.0.0-20220622183110-fd043fe589d2 // indirect
 	golang.org/x/sync v0.0.0-20220819030929-7fc1605a5dde // indirect
-	golang.org/x/sys v0.0.0-20220829200755-d48e67d00261 // indirect
+	golang.org/x/sys v0.0.0-20221013171732-95e765b1cc43 // indirect
 	golang.org/x/term v0.0.0-20220722155259-a9ba230a4035 // indirect
-	golang.org/x/text v0.3.7 // indirect
+	golang.org/x/text v0.3.8 // indirect
 	golang.org/x/tools v0.1.12 // indirect
 	golang.org/x/xerrors v0.0.0-20220609144429-65e65417b02f // indirect
 	google.golang.org/api v0.93.0 // indirect
@@ -256,8 +256,7 @@ replace (
 	// TODO Remove it: https://github.com/cosmos/cosmos-sdk/issues/10409
 	github.com/gin-gonic/gin => github.com/gin-gonic/gin v1.7.0
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
-
-	github.com/jhump/protoreflect => github.com/jhump/protoreflect v1.9.0
+	github.com/tendermint/tendermint => github.com/celestiaorg/tendermint v0.34.18-0.20221013213714-8be9b54c8c21
 )
 
 retract v0.46.2
