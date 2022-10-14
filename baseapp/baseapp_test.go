@@ -26,6 +26,7 @@ import (
 	snapshottypes "github.com/cosmos/cosmos-sdk/snapshots/types"
 	"github.com/cosmos/cosmos-sdk/store/rootmulti"
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
+	"github.com/cosmos/cosmos-sdk/store/v2alpha1/multi"
 	"github.com/cosmos/cosmos-sdk/testutil"
 	"github.com/cosmos/cosmos-sdk/testutil/testdata"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -34,8 +35,9 @@ import (
 )
 
 var (
-	capKey1 = sdk.NewKVStoreKey("key1")
-	capKey2 = sdk.NewKVStoreKey("key2")
+	capKey1    = sdk.NewKVStoreKey("key1")
+	capKey2    = sdk.NewKVStoreKey("key2")
+	randSource = int64(123456789)
 
 	// testTxPriority is the CheckTx priority that we set in the test
 	// antehandler.
@@ -2172,4 +2174,228 @@ func TestBaseApp_EndBlock(t *testing.T) {
 	require.Len(t, res.GetValidatorUpdates(), 1)
 	require.Equal(t, int64(100), res.GetValidatorUpdates()[0].Power)
 	require.Equal(t, cp.Block.MaxGas, res.ConsensusParamUpdates.Block.MaxGas)
+}
+
+func executeBlockWithArbitraryTxs(t *testing.T, app *BaseApp, numTransactions int, blockHeight int64) []txTest {
+	codec := codec.NewLegacyAmino()
+	registerTestCodec(codec)
+	r := rand.New(rand.NewSource(randSource))
+	randSource += 1
+	keyCounter := r.Intn(10000)
+	txs := make([]txTest, 0)
+
+	app.BeginBlock(abci.RequestBeginBlock{Header: tmproto.Header{Height: blockHeight}})
+	for txNum := 0; txNum < numTransactions; txNum++ {
+		tx := txTest{Msgs: []sdk.Msg{}}
+		for msgNum := 0; msgNum < 1; msgNum++ {
+			key := []byte(fmt.Sprintf("%v", keyCounter))
+			value := make([]byte, 10000)
+			_, err := r.Read(value)
+			require.NoError(t, err)
+			tx.Msgs = append(tx.Msgs, msgKeyValue{Key: key, Value: value})
+			keyCounter++
+		}
+		txBytes, err := codec.Marshal(tx)
+		require.NoError(t, err)
+		resp := app.DeliverTx(abci.RequestDeliverTx{Tx: txBytes})
+		require.True(t, resp.IsOK(), "%v", resp.String())
+		txs = append(txs, tx)
+	}
+	app.EndBlock(abci.RequestEndBlock{Height: blockHeight})
+	return txs
+}
+
+func getBlockWithArbitraryTxs(t *testing.T, app *BaseApp, numTransactions int, blockHeight int64) (*abci.RequestBeginBlock, []txTest, []*abci.RequestDeliverTx, *abci.RequestEndBlock) {
+	codec := codec.NewLegacyAmino()
+	registerTestCodec(codec)
+	r := rand.New(rand.NewSource(randSource))
+	randSource += 1
+	keyCounter := r.Intn(10000)
+	txs := make([]txTest, 0)
+
+	beginRequest := abci.RequestBeginBlock{Header: tmproto.Header{Height: blockHeight}}
+	deliverRequests := make([]*abci.RequestDeliverTx, 0)
+	for txNum := 0; txNum < numTransactions; txNum++ {
+		tx := txTest{Msgs: []sdk.Msg{}}
+		for msgNum := 0; msgNum < 1; msgNum++ {
+			key := []byte(fmt.Sprintf("%v", keyCounter))
+			value := make([]byte, 10000)
+			_, err := r.Read(value)
+			require.NoError(t, err)
+			tx.Msgs = append(tx.Msgs, msgKeyValue{Key: key, Value: value})
+			keyCounter++
+		}
+		txBytes, err := codec.Marshal(tx)
+		require.NoError(t, err)
+		deliverRequest := abci.RequestDeliverTx{Tx: txBytes}
+		deliverRequests = append(deliverRequests, &deliverRequest)
+		txs = append(txs, tx)
+	}
+	endBlockRequest := abci.RequestEndBlock{Height: blockHeight}
+	return &beginRequest, txs, deliverRequests, &endBlockRequest
+}
+
+func executeBlock(t *testing.T, app *BaseApp, txs []txTest, blockHeight int64) {
+	codec := codec.NewLegacyAmino()
+	registerTestCodec(codec)
+
+	app.BeginBlock(abci.RequestBeginBlock{Header: tmproto.Header{Height: blockHeight}})
+	for _, tx := range txs {
+		txBytes, err := codec.Marshal(tx)
+		require.NoError(t, err)
+		resp := app.DeliverTx(abci.RequestDeliverTx{Tx: txBytes})
+		require.True(t, resp.IsOK(), "%v", resp.String())
+	}
+	app.EndBlock(abci.RequestEndBlock{Height: blockHeight})
+}
+
+func executeBlockWithRequests(t *testing.T, app *BaseApp, beginRequest *abci.RequestBeginBlock, deliverRequests []*abci.RequestDeliverTx, endRequest *abci.RequestEndBlock, blockHeight int64) {
+	if beginRequest != nil {
+		if blockHeight != 0 {
+			beginRequest.Header.Height = blockHeight
+		}
+		app.BeginBlock(*beginRequest)
+	}
+	for _, deliverRequest := range deliverRequests {
+		require.NotNil(t, deliverRequest)
+		resp := app.DeliverTx(*deliverRequest)
+		require.True(t, resp.IsOK(), "%v", resp.String())
+	}
+	if endRequest != nil {
+		app.EndBlock(*endRequest)
+	}
+}
+
+// Takes the key embedded in given message, and returns a
+// deliverRequest with a tx that has the same key but a different value
+func getFraudTx(t *testing.T, tx txTest) *abci.RequestDeliverTx {
+	msgs := tx.GetMsgs()
+	require.NotEmpty(t, msgs)
+	msgKV := msgs[0].(msgKeyValue)
+	key := msgKV.Key
+	codec := codec.NewLegacyAmino()
+	registerTestCodec(codec)
+
+	fraudTx := txTest{Msgs: []sdk.Msg{}}
+	r := rand.New(rand.NewSource(randSource))
+	randSource += 1
+
+	newValue := make([]byte, 10000)
+	_, err := r.Read(newValue)
+	require.NoError(t, err)
+	fraudTx.Msgs = append(fraudTx.Msgs, msgKeyValue{Key: key, Value: newValue})
+
+	fraudTxBytes, err := codec.Marshal(fraudTx)
+	require.Nil(t, err)
+	fraudDeliverRequest := abci.RequestDeliverTx{Tx: fraudTxBytes}
+
+	return &fraudDeliverRequest
+}
+
+func TestGenerateAndLoadFraudProof(t *testing.T) {
+	/*
+		Tests switch between a baseapp and fraudproof and covers parts of the fraudproof cycle. Steps:
+		1. Initialize a baseapp, B1, with some state, S0
+		2. Make some state transition to state S1 by doing some transactions, commit those transactions, and save
+		resulting SMT root hash
+		3. Make another set of state transitions to state S2 but do not commit
+		4. Generate a fraudproof which should ignore the uncommitted set of transactions, and export S1 into a fraudProof data structure (minimal snapshot)
+		5. Verify the fraudproof and check verification passes (done in light client)
+		6. Load a fresh baseapp, B2, with the contents of fraud proof data structure from (4) so it can begin from state S1.
+		7. Check if the SMT root hashes of the new app with saved SMT root hash
+
+		Tests to write in future:
+
+		1. Block with bad txs: Txs that exceed gas limits, validateBasic fails, unregistered messages (see TestRunInvalidTransaction)
+		2. Block with invalid appHash at the end
+		3. Corrupted Fraud Proof: bad SMT format, insufficient key-value pairs inside SMT needed to verify fraud
+		4. Bad block, fraud proof needed, fraud proof works, chain halts (happy case)
+	*/
+
+	storeTraceBuf := &bytes.Buffer{}
+	subStoreTraceBuf := &bytes.Buffer{}
+
+	routerOpt := func(bapp *BaseApp) {
+		bapp.Router().AddRoute(sdk.NewRoute(routeMsgKeyValue, func(ctx sdk.Context, msg sdk.Msg) (*sdk.Result, error) {
+			kv := msg.(*msgKeyValue)
+			bapp.cms.GetKVStore(capKey2).Set(kv.Key, kv.Value)
+			return &sdk.Result{}, nil
+		}))
+	}
+
+	// BaseApp, B1
+	appB1 := setupBaseApp(t,
+		routerOpt,
+		SetSubstoreTracer(storeTraceBuf),
+		SetTracerFor(capKey2.Name(), subStoreTraceBuf),
+	)
+
+	// B1 <- S0
+	appB1.InitChain(abci.RequestInitChain{})
+
+	numTransactions := 2
+	// B1 <- S1
+	executeBlockWithArbitraryTxs(t, appB1, numTransactions, 1)
+	appB1.Commit()
+
+	// B1 <- S2
+	beginRequest, txs, deliverRequests, _ := getBlockWithArbitraryTxs(t, appB1, numTransactions, 2)
+
+	// Modify deliverRequests to discard last tx in the block
+	nonFraudulentDeliverRequests := deliverRequests[0 : len(deliverRequests)-1]
+	txs = txs[0 : len(txs)-1]
+	require.NotEmpty(t, txs)
+	fraudDeliverRequest := getFraudTx(t, txs[0])
+
+	executeBlockWithRequests(t, appB1, beginRequest, nonFraudulentDeliverRequests, nil, 0)
+
+	// Save appHash, substoreHash here for comparision later
+	appHashB1, err := appB1.cms.(*multi.Store).GetAppHash()
+	require.Nil(t, err)
+	storeHashB1 := appB1.cms.(*multi.Store).GetSubstoreSMT(capKey2.Name()).Root()
+
+	routerOpts := make(map[string]AppOptionFunc)
+	newRouterOpt := func(bapp *BaseApp) {
+		bapp.Router().AddRoute(sdk.NewRoute(routeMsgKeyValue, func(ctx sdk.Context, msg sdk.Msg) (*sdk.Result, error) {
+			kv := msg.(*msgKeyValue)
+			cms := bapp.cms.(*multi.Store)
+			sKeys := cms.GetStoreKeys()
+			largestKey := sKeys[0]
+			for _, sKey := range sKeys[1:] {
+				if sKey.Name() > largestKey.Name() {
+					largestKey = sKey
+				}
+			}
+			bapp.cms.GetKVStore(largestKey).Set(kv.Key, kv.Value)
+			return &sdk.Result{}, nil
+		}))
+	}
+	routerOpts[capKey2.Name()] = newRouterOpt
+
+	resp := appB1.generateFraudProofWithRouterOpts(
+		abci.RequestGenerateFraudProof{
+			BeginBlockRequest: *beginRequest, DeliverTxRequests: append(nonFraudulentDeliverRequests, fraudDeliverRequest), EndBlockRequest: nil,
+		},
+		routerOpts,
+	)
+
+	// Light Client
+	fraudProof := FraudProof{}
+	fraudProof.fromABCI(*resp.FraudProof)
+	require.Equal(t, appHashB1, fraudProof.appHash)
+	fraudProofVerified, err := fraudProof.verifyFraudProof()
+	require.Nil(t, err)
+	require.True(t, fraudProofVerified)
+
+	// Now we take contents of the fraud proof which was recorded with S2 and try to populate a fresh baseapp B2 with it
+	// B2 <- S2
+	codec := codec.NewLegacyAmino()
+	registerTestCodec(codec)
+	appB2, err := SetupBaseAppFromFraudProof(t.Name(), defaultLogger(), dbm.NewMemDB(), testTxDecoder(codec), fraudProof, AppOptionFunc(routerOpt))
+	require.Nil(t, err)
+	appB2Hash, err := appB2.cms.(*multi.Store).GetAppHash()
+	require.Nil(t, err)
+	require.Equal(t, appHashB1, appB2Hash)
+	storeHashB2 := appB2.cms.(*multi.Store).GetSubstoreSMT(capKey2.Name()).Root()
+	require.Equal(t, storeHashB1, storeHashB2)
 }
