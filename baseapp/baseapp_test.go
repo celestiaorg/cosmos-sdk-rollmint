@@ -26,7 +26,6 @@ import (
 	snapshottypes "github.com/cosmos/cosmos-sdk/snapshots/types"
 	"github.com/cosmos/cosmos-sdk/store/rootmulti"
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
-	"github.com/cosmos/cosmos-sdk/store/v2alpha1/multi"
 	"github.com/cosmos/cosmos-sdk/testutil"
 	"github.com/cosmos/cosmos-sdk/testutil/testdata"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -2394,10 +2393,9 @@ func TestGenerateAndLoadFraudProof(t *testing.T) {
 	// B2 <- S2
 	codec := codec.NewLegacyAmino()
 	registerTestCodec(codec)
-	appB2, err := SetupBaseAppFromFraudProof(t.Name(), defaultLogger(), dbm.NewMemDB(), testTxDecoder(codec), fraudProof, AppOptionFunc(routerOpt))
+	appB2, err := SetupBaseAppFromFraudProof(t.Name(), defaultLogger(), dbm.NewMemDB(), testTxDecoder(codec), fraudProof, routerOpt)
 	require.Nil(t, err)
-	appB2Hash, err := appB2.cms.(*multi.Store).GetAppHash()
-	require.Nil(t, err)
+	appB2Hash := appB2.cms.(*rootmulti.Store).GetAppHash()
 	require.Equal(t, appHashB1, appB2Hash)
 	// storeHashB2 := appB2.cms.(*multi.Store).GetSubstoreSMT(capKey2.Name()).Root()
 	// require.Equal(t, storeHashB1, storeHashB2)

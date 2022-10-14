@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/gogo/protobuf/proto"
+	smtlib "github.com/lazyledger/smt"
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto/tmhash"
 	"github.com/tendermint/tendermint/libs/log"
@@ -837,4 +838,47 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 // makeABCIData generates the Data field to be sent to ABCI Check/DeliverTx.
 func makeABCIData(msgResponses []*codectypes.Any) ([]byte, error) {
 	return proto.Marshal(&sdk.TxMsgData{MsgResponses: msgResponses})
+}
+
+// set up a new baseapp from given params
+func SetupBaseAppFromParams(appName string, logger log.Logger, db dbm.DB, txDecoder sdk.TxDecoder, storeKeyNames []string, storeKeyToSMT map[string]*smtlib.SparseMerkleTree, blockHeight int64, storeToLoadFrom map[string]types.KVStore, options ...AppOption) (*BaseApp, error) {
+	storeKeys := make([]storetypes.StoreKey, 0, len(storeKeyNames))
+	storeKeyToSubstoreHash := make(map[string][]byte)
+	for _, storeKeyName := range storeKeyNames {
+		storeKey := sdk.NewKVStoreKey(storeKeyName)
+		storeKeys = append(storeKeys, storeKey)
+		subStore := storeToLoadFrom[storeKeyName]
+		it := subStore.Iterator(nil, nil)
+		substoreSMT := storeKeyToSMT[storeKeyName]
+		for ; it.Valid(); it.Next() {
+			key, val := it.Key(), it.Value()
+			proof, err := substoreSMT.Prove(key)
+			if err != nil {
+				return nil, err
+			}
+			options = append(options, SetDeepSMTBranchKVPair(storeKey, substoreSMT.Root(), proof, key, val))
+		}
+		storeKeyToSubstoreHash[storeKeyName] = substoreSMT.Root()
+	}
+
+	options = append(options, SetSubstoresWithRoots(storeKeyToSubstoreHash, storeKeys...))
+
+	// This initial height is used in `BeginBlock` in `validateHeight`
+	options = append(options, SetInitialHeight(blockHeight))
+
+	// make list of options to pass by parsing fraudproof
+	app := NewBaseApp(appName, logger, db, txDecoder, options...)
+	// stores are mounted
+	err := app.Init()
+
+	return app, err
+}
+
+// set up a new baseapp from a fraudproof
+func SetupBaseAppFromFraudProof(appName string, logger log.Logger, db dbm.DB, txDecoder sdk.TxDecoder, fraudProof FraudProof, options ...func(*BaseApp)) (*BaseApp, error) {
+	storeKeyToSMT, err := fraudProof.getSubstoreSMTs()
+	if err != nil {
+		return nil, err
+	}
+	return SetupBaseAppFromParams(appName, logger, db, txDecoder, fraudProof.getModules(), storeKeyToSMT, fraudProof.blockHeight, fraudProof.extractStore(), options...)
 }
