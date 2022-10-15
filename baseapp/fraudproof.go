@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 
+	smtlib "github.com/celestiaorg/smt"
 	"github.com/cosmos/cosmos-sdk/store/types"
 	"github.com/cosmos/cosmos-sdk/store/v2alpha1/smt"
 	iavltree "github.com/cosmos/iavl"
