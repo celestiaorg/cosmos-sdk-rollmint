@@ -193,6 +193,18 @@ func (rs *Store) LoadLatestVersion() error {
 	return rs.loadVersion(ver, nil)
 }
 
+func (rs *Store) LoadLastVersion() error {
+
+	if rs.lastCommitInfo.GetVersion() == 0 {
+		// This case means that no commit has been made in the store, so
+		// there is no last version.
+		return fmt.Errorf("no previous commit found")
+	}
+
+	lastVersion := rs.lastCommitInfo.GetVersion()
+	return rs.loadVersion(lastVersion, nil)
+}
+
 // LoadVersion implements CommitMultiStore.
 func (rs *Store) LoadVersion(ver int64) error {
 	return rs.loadVersion(ver, nil)
