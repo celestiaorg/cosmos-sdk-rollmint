@@ -1,6 +1,7 @@
 package baseapp
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/json"
 	"errors"
@@ -14,6 +15,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	abci "github.com/tendermint/tendermint/abci/types"
 	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
+	db "github.com/tendermint/tm-db"
 	"google.golang.org/grpc/codes"
 	grpcstatus "google.golang.org/grpc/status"
 
@@ -217,7 +219,60 @@ func (app *BaseApp) GenerateFraudProof(req abci.RequestGenerateFraudProof) (res 
 }
 
 func (app *BaseApp) VerifyFraudProof(req abci.RequestVerifyFraudProof) (res abci.ResponseVerifyFraudProof) {
-	return abci.ResponseVerifyFraudProof{}
+	abciFraudProof := req.FraudProof
+	fraudProof := FraudProof{}
+	fraudProof.fromABCI(*abciFraudProof)
+
+	// First two levels of verification
+	success, err := fraudProof.verifyFraudProof()
+	if err != nil {
+		panic(err)
+	}
+
+	if success {
+		// Third level of verification
+
+		// Setup a new app from fraud proof
+		appFromFraudProof, err := SetupBaseAppFromFraudProof(
+			app.Name()+"FromFraudProof",
+			app.logger,
+			db.NewMemDB(),
+			app.txDecoder,
+			fraudProof,
+		)
+		if err != nil {
+			panic(err)
+		}
+		appFromFraudProof.InitChain(abci.RequestInitChain{})
+		appHash := appFromFraudProof.GetAppHash(abci.RequestGetAppHash{}).AppHash
+
+		if !bytes.Equal(fraudProof.appHash, appHash) {
+			return abci.ResponseVerifyFraudProof{
+				Success: false,
+			}
+		}
+
+		// Execute fraudulent state transition
+		if fraudProof.fraudulentBeginBlock != nil {
+			appFromFraudProof.BeginBlock(*fraudProof.fraudulentBeginBlock)
+		} else {
+			// Need to add some dummy begin block here since its a new app
+
+			appFromFraudProof.BeginBlock(abci.RequestBeginBlock{Header: tmproto.Header{Height: fraudProof.blockHeight}})
+			if fraudProof.fraudulentDeliverTx != nil {
+				appFromFraudProof.DeliverTx(*fraudProof.fraudulentDeliverTx)
+			} else {
+				appFromFraudProof.EndBlock(*fraudProof.fraudulentEndBlock)
+			}
+		}
+
+		appHash = appFromFraudProof.GetAppHash(abci.RequestGetAppHash{}).AppHash
+		success = bytes.Equal(appHash, req.ExpectedAppHash)
+	}
+	res = abci.ResponseVerifyFraudProof{
+		Success: success,
+	}
+	return res
 }
 
 // BeginBlock implements the ABCI application interface.
