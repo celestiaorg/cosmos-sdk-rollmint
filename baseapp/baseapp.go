@@ -1,7 +1,6 @@
 package baseapp
 
 import (
-	"bytes"
 	"fmt"
 	"strings"
 
@@ -839,58 +838,6 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 // makeABCIData generates the Data field to be sent to ABCI Check/DeliverTx.
 func makeABCIData(msgResponses []*codectypes.Any) ([]byte, error) {
 	return proto.Marshal(&sdk.TxMsgData{MsgResponses: msgResponses})
-}
-
-// enableFraudProofGenerationMode rolls back an app's state to a previous
-// state and enables tracing for the list of store keys
-// It returns the tracing-enabled app along with the trace buffers used
-func (app *BaseApp) enableFraudProofGenerationMode(storeKeys []storetypes.StoreKey, routerOpts map[string]func(*BaseApp)) (*BaseApp, map[string]*bytes.Buffer, error) {
-	cms := app.cms.(*rootmulti.Store)
-	err := cms.LoadLatestVersion()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return nil, nil, nil
-
-	// // Add options for tracing
-	// storeTraceBuf := &bytes.Buffer{}
-
-	// storeKeyToSubstoreTraceBuf := make(map[string]*bytes.Buffer)
-
-	// // Initialize params from previousCMS
-	// storeToLoadFrom := make(map[string]types.KVStore)
-	// storeKeyToSMT := make(map[string]*smtlib.SparseMerkleTree)
-	// storeKeyNames := make([]string, 0, len(storeKeys))
-	// for _, storeKey := range storeKeys {
-	// 	storeKeyName := storeKey.Name()
-	// 	storeKeyNames = append(storeKeyNames, storeKeyName)
-	// 	storeToLoadFrom[storeKeyName] = previousCMS.GetKVStore(storeKey)
-	// 	storeKeyToSMT[storeKeyName] = previousCMS.GetSubstoreSMT(storeKeyName).GetTree()
-	// 	storeKeyToSubstoreTraceBuf[storeKeyName] = &bytes.Buffer{}
-	// }
-
-	// // BaseApp, B1
-	// options := []AppOption{
-	// 	SetSubstoreTracer(storeTraceBuf),
-	// }
-
-	// for _, storeKey := range storeKeys {
-	// 	if substoreBuf, exists := storeKeyToSubstoreTraceBuf[storeKey.Name()]; exists {
-	// 		options = append(options, SetTracerFor(storeKey.Name(), substoreBuf))
-	// 	}
-	// 	if routerOpt, exists := routerOpts[(storeKey.Name())]; exists {
-	// 		options = append(options, AppOptionFunc(routerOpt))
-	// 	}
-	// }
-	// newApp, err := SetupBaseAppFromParams(app.name+"WithTracing", app.logger, dbm.NewMemDB(), app.txDecoder, storeKeyNames, storeKeyToSMT, app.LastBlockHeight(), storeToLoadFrom, options...)
-
-	// // Need to reset all the buffers to remove anything logged while setting up baseapp
-	// storeTraceBuf.Reset()
-	// for _, storeKey := range storeKeys {
-	// 	storeKeyToSubstoreTraceBuf[storeKey.Name()].Reset()
-	// }
-	// return newApp, storeKeyToSubstoreTraceBuf, err
 }
 
 // // set up a new baseapp from given params
