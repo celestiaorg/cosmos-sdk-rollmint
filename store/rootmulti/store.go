@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 
+	sdkmaps "github.com/cosmos/cosmos-sdk/store/internal/maps"
 	iavltree "github.com/cosmos/iavl"
 	protoio "github.com/gogo/protobuf/io"
 	gogotypes "github.com/gogo/protobuf/types"
@@ -1050,8 +1051,29 @@ func (rs *Store) flushMetadata(db dbm.DB, version int64, cInfo *types.CommitInfo
 	rs.logger.Debug("flushing metadata finished", "height", version)
 }
 
-func (rs *Store) GetAppHash() []byte {
-	return rs.LastCommitID().Hash
+func (rs *Store) GetAppHash() ([]byte, error) {
+	m, err := rs.getWorkingMap()
+	if err != nil {
+		return nil, err
+	}
+	return sdkmaps.HashFromMap(m), nil
+}
+
+func (rs *Store) getWorkingMap() (map[string][]byte, error) {
+	stores := rs.stores
+	m := make(map[string][]byte, len(stores))
+	for key := range stores {
+		name := key.Name()
+		iavlStore, err := rs.GetIAVLStore(name)
+		if err != nil {
+			return nil, err
+		}
+		m[name], err = iavlStore.Root()
+		if err != nil {
+			return nil, err
+		}
+	}
+	return m, nil
 }
 
 type storeParams struct {
@@ -1163,7 +1185,14 @@ func (rs *Store) GetIAVLStore(key string) (*iavl.Store, error) {
 	return store.(*iavl.Store), nil
 }
 
-func (rs *Store) GetStoreProof(storeKeyName string) *tmcrypto.ProofOp {
-	proofOp := rs.lastCommitInfo.ProofOp(storeKeyName)
-	return &proofOp
+func (rs *Store) GetStoreProof(storeKeyName string) (*tmcrypto.ProofOp, error) {
+	m, err := rs.getWorkingMap()
+	if err != nil {
+		return nil, err
+	}
+	proofOp, err := types.ProofOpFromMap(m, storeKeyName)
+	if err != nil {
+		return nil, err
+	}
+	return &proofOp, nil
 }

@@ -847,7 +847,10 @@ func (app *BaseApp) getFraudProof() (FraudProof, error) {
 	fraudProof.blockHeight = app.LastBlockHeight()
 	cms := app.cms.(*rootmulti.Store)
 
-	appHash := cms.GetAppHash()
+	appHash, err := cms.GetAppHash()
+	if err != nil {
+		return FraudProof{}, err
+	}
 	fraudProof.appHash = appHash
 	storeKeys := cms.GetStoreKeys()
 	for _, storeKey := range storeKeys {
@@ -864,7 +867,10 @@ func (app *BaseApp) getFraudProof() (FraudProof, error) {
 			if rootHash == nil {
 				continue
 			}
-			proof := cms.GetStoreProof(storeKey.Name())
+			proof, err := cms.GetStoreProof(storeKey.Name())
+			if err != nil {
+				return FraudProof{}, err
+			}
 			stateWitness := StateWitness{
 				Proof:       *proof,
 				RootHash:    rootHash,

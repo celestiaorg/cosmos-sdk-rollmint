@@ -135,7 +135,10 @@ func (app *BaseApp) Info(req abci.RequestInfo) abci.ResponseInfo {
 func (app *BaseApp) GetAppHash(req abci.RequestGetAppHash) (res abci.ResponseGetAppHash) {
 	cms := app.cms.(*rootmulti.Store)
 
-	appHash := cms.GetAppHash()
+	appHash, err := cms.GetAppHash()
+	if err != nil {
+		panic(err)
+	}
 	res = abci.ResponseGetAppHash{
 		AppHash: appHash,
 	}

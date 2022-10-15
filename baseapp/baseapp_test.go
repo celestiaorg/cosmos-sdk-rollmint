@@ -2349,7 +2349,8 @@ func TestGenerateAndLoadFraudProof(t *testing.T) {
 	executeBlockWithRequests(t, appB1, beginRequest, nonFraudulentDeliverRequests, nil, 0)
 
 	// Save appHash, substoreHash here for comparision later
-	appHashB1 := appB1.cms.(*rootmulti.Store).GetAppHash()
+	appHashB1, err := appB1.cms.(*rootmulti.Store).GetAppHash()
+	require.Nil(t, err)
 
 	//TODO: Write iavl equivalent somehow
 	// storeHashB1 := appB1.cms.(*multi.Store).GetSubstoreSMT(capKey2.Name()).Root()
