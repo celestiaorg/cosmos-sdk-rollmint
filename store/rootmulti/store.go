@@ -376,7 +376,7 @@ func (rs *Store) SetTracerFor(skey string, w io.Writer) types.MultiStore {
 	return rs
 }
 
-func (rs *Store) resetAllTraceWriters() {
+func (rs *Store) ResetAllTraceWriters() {
 	buf, ok := rs.traceWriter.(*bytes.Buffer)
 	if ok {
 		buf.Reset()
@@ -482,7 +482,7 @@ func (rs *Store) Commit() types.CommitID {
 	}
 	// reset the removalMap
 	rs.removalMap = make(map[types.StoreKey]bool)
-	rs.resetAllTraceWriters()
+	rs.ResetAllTraceWriters()
 
 	if err := rs.handlePruning(version); err != nil {
 		panic(err)
