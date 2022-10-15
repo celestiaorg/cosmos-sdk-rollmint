@@ -857,13 +857,17 @@ func (app *BaseApp) getFraudProof() (FraudProof, error) {
 			if err != nil {
 				return FraudProof{}, err
 			}
-			if iavlStore.LastCommitID().Hash == nil {
+			rootHash, err := iavlStore.Root()
+			if err != nil {
+				return FraudProof{}, err
+			}
+			if rootHash == nil {
 				continue
 			}
 			proof := cms.GetStoreProof(storeKey.Name())
 			stateWitness := StateWitness{
 				Proof:       *proof,
-				RootHash:    iavlStore.LastCommitID().Hash,
+				RootHash:    rootHash,
 				WitnessData: make([]WitnessData, 0),
 			}
 			for key := range keys {

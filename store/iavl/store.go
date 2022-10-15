@@ -292,6 +292,12 @@ func (st *Store) GetProofFromTree(key []byte) *tmcrypto.ProofOps {
 	return getProofFromTree(iavlTree, key, true)
 }
 
+func (st *Store) Root() ([]byte, error) {
+	iavlTree := st.tree.((*iavl.MutableTree))
+	hash, err := iavlTree.WorkingHash()
+	return hash, err
+}
+
 // Handle gatest the latest height, if height is 0
 func getHeight(tree Tree, req abci.RequestQuery) int64 {
 	height := req.Height
