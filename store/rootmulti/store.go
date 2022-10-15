@@ -1,6 +1,7 @@
 package rootmulti
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"math"
@@ -375,6 +376,21 @@ func (rs *Store) SetTracerFor(skey string, w io.Writer) types.MultiStore {
 	return rs
 }
 
+func (rs *Store) resetAllTraceWriters() {
+	buf, ok := rs.traceWriter.(*bytes.Buffer)
+	if ok {
+		buf.Reset()
+	}
+	for _, storeParams := range rs.storesParams {
+		if storeParams.traceWriter != nil {
+			buf, ok := storeParams.traceWriter.(*bytes.Buffer)
+			if ok {
+				buf.Reset()
+			}
+		}
+	}
+}
+
 // SetTracingContext updates the tracing context for the MultiStore by merging
 // the given context with the existing context by key. Any existing keys will
 // be overwritten. It is implied that the caller should update the context when
@@ -466,6 +482,7 @@ func (rs *Store) Commit() types.CommitID {
 	}
 	// reset the removalMap
 	rs.removalMap = make(map[types.StoreKey]bool)
+	rs.resetAllTraceWriters()
 
 	if err := rs.handlePruning(version); err != nil {
 		panic(err)
