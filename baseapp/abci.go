@@ -210,7 +210,7 @@ func (app *BaseApp) GenerateFraudProof(req abci.RequestGenerateFraudProof) (res 
 	res = abci.ResponseGenerateFraudProof{
 		FraudProof: &abciFraudProof,
 	}
-	return abci.ResponseGenerateFraudProof{}
+	return res
 }
 
 func (app *BaseApp) generateFraudProofWithRouterOpts(req abci.RequestGenerateFraudProof, routerOpts map[string]func(*BaseApp)) (res abci.ResponseGenerateFraudProof) {

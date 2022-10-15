@@ -286,6 +286,12 @@ func (st *Store) Import(version int64) (*iavl.Importer, error) {
 	return tree.Import(version)
 }
 
+// Wrapper for getProofFromTree
+func (st *Store) GetProofFromTree(key []byte) *tmcrypto.ProofOps {
+	iavlTree := st.tree.((*iavl.MutableTree))
+	return getProofFromTree(iavlTree, key, true)
+}
+
 // Handle gatest the latest height, if height is 0
 func getHeight(tree Tree, req abci.RequestQuery) int64 {
 	height := req.Height

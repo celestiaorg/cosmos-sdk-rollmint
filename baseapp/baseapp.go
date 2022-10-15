@@ -853,28 +853,25 @@ func (app *BaseApp) getFraudProof() (FraudProof, error) {
 	for _, storeKey := range storeKeys {
 		if subStoreTraceBuf := cms.GetTracerBufferFor(storeKey.Name()); subStoreTraceBuf != nil {
 			keys := cms.GetKVStore(storeKey).(*tracekv.Store).GetAllKeysUsedInTrace(*subStoreTraceBuf)
-			iavlTree, err := cms.GetIAVLStore(storeKey.Name())
+			iavlStore, err := cms.GetIAVLStore(storeKey.Name())
 			if err != nil {
 				return FraudProof{}, err
 			}
-			if iavlTree.LastCommitID().Hash == nil {
+			if iavlStore.LastCommitID().Hash == nil {
 				continue
 			}
 			proof := cms.GetStoreProof(storeKey.Name())
 			stateWitness := StateWitness{
 				Proof:       *proof,
-				RootHash:    iavlTree.LastCommitID().Hash,
+				RootHash:    iavlStore.LastCommitID().Hash,
 				WitnessData: make([]WitnessData, 0),
 			}
 			for key := range keys {
 				bKey := []byte(key)
-				has := iavlTree.Has(bKey)
+				has := iavlStore.Has(bKey)
 				if has {
-					value := iavlTree.Get(bKey)
-					proof, err := iavlTree.GetProof(bKey)
-					if err != nil {
-						return FraudProof{}, err
-					}
+					value := iavlStore.Get(bKey)
+					proof := iavlStore.GetProofFromTree(bKey)
 					bVal := []byte(value)
 					witnessData := WitnessData{bKey, bVal, proof.GetOps()[0]}
 					stateWitness.WitnessData = append(stateWitness.WitnessData, witnessData)
