@@ -6,6 +6,7 @@ import (
 	"io"
 	"testing"
 
+	"github.com/chrispappas/golang-generics-set/set"
 	"github.com/stretchr/testify/require"
 
 	dbm "github.com/tendermint/tm-db"
@@ -111,6 +112,25 @@ func TestTraceKVStoreSet(t *testing.T) {
 	store := newEmptyTraceKVStore(&buf)
 	require.Panics(t, func() { store.Set([]byte(""), []byte("value")) }, "setting an empty key should panic")
 	require.Panics(t, func() { store.Set(nil, []byte("value")) }, "setting a nil key should panic")
+}
+
+func TestGetAllKeysUsedInTrace(t *testing.T) {
+	expectedKeys := set.FromSlice([]string{
+		string(kvPairs[0].Key),
+		string(kvPairs[1].Key),
+		string(kvPairs[2].Key),
+	})
+
+	var buf bytes.Buffer
+	store := newEmptyTraceKVStore(&buf)
+	buf.Reset()
+
+	for _, kvPair := range kvPairs {
+		store.Set(kvPair.Key, kvPair.Value)
+	}
+
+	keys := store.GetAllKeysUsedInTrace(buf)
+	require.Equal(t, expectedKeys, keys)
 }
 
 func TestTraceKVStoreDelete(t *testing.T) {
