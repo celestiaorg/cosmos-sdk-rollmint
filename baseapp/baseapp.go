@@ -1,6 +1,7 @@
 package baseapp
 
 import (
+	"bytes"
 	"fmt"
 	"strings"
 
@@ -840,45 +841,97 @@ func makeABCIData(msgResponses []*codectypes.Any) ([]byte, error) {
 	return proto.Marshal(&sdk.TxMsgData{MsgResponses: msgResponses})
 }
 
-// set up a new baseapp from given params
-func SetupBaseAppFromParams(appName string, logger log.Logger, db dbm.DB, txDecoder sdk.TxDecoder, storeKeyNames []string, storeKeyToSMT map[string]*smtlib.SparseMerkleTree, blockHeight int64, storeToLoadFrom map[string]types.KVStore, options ...AppOption) (*BaseApp, error) {
-	storeKeys := make([]storetypes.StoreKey, 0, len(storeKeyNames))
-	storeKeyToSubstoreHash := make(map[string][]byte)
-	for _, storeKeyName := range storeKeyNames {
-		storeKey := sdk.NewKVStoreKey(storeKeyName)
-		storeKeys = append(storeKeys, storeKey)
-		subStore := storeToLoadFrom[storeKeyName]
-		it := subStore.Iterator(nil, nil)
-		substoreSMT := storeKeyToSMT[storeKeyName]
-		for ; it.Valid(); it.Next() {
-			key, val := it.Key(), it.Value()
-			proof, err := substoreSMT.Prove(key)
-			if err != nil {
-				return nil, err
-			}
-			options = append(options, SetDeepSMTBranchKVPair(storeKey, substoreSMT.Root(), proof, key, val))
-		}
-		storeKeyToSubstoreHash[storeKeyName] = substoreSMT.Root()
-	}
-
-	options = append(options, SetSubstoresWithRoots(storeKeyToSubstoreHash, storeKeys...))
-
-	// This initial height is used in `BeginBlock` in `validateHeight`
-	options = append(options, SetInitialHeight(blockHeight))
-
-	// make list of options to pass by parsing fraudproof
-	app := NewBaseApp(appName, logger, db, txDecoder, options...)
-	// stores are mounted
-	err := app.Init()
-
-	return app, err
-}
-
-// set up a new baseapp from a fraudproof
-func SetupBaseAppFromFraudProof(appName string, logger log.Logger, db dbm.DB, txDecoder sdk.TxDecoder, fraudProof FraudProof, options ...func(*BaseApp)) (*BaseApp, error) {
-	storeKeyToSMT, err := fraudProof.getSubstoreSMTs()
+// enableFraudProofGenerationMode rolls back an app's state to a previous
+// state and enables tracing for the list of store keys
+// It returns the tracing-enabled app along with the trace buffers used
+func (app *BaseApp) enableFraudProofGenerationMode(storeKeys []storetypes.StoreKey, routerOpts map[string]func(*BaseApp)) (*BaseApp, map[string]*bytes.Buffer, error) {
+	cms := app.cms.(*rootmulti.Store)
+	err := cms.LoadLatestVersion()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return SetupBaseAppFromParams(appName, logger, db, txDecoder, fraudProof.getModules(), storeKeyToSMT, fraudProof.blockHeight, fraudProof.extractStore(), options...)
+
+	return nil, nil, nil
+
+	// // Add options for tracing
+	// storeTraceBuf := &bytes.Buffer{}
+
+	// storeKeyToSubstoreTraceBuf := make(map[string]*bytes.Buffer)
+
+	// // Initialize params from previousCMS
+	// storeToLoadFrom := make(map[string]types.KVStore)
+	// storeKeyToSMT := make(map[string]*smtlib.SparseMerkleTree)
+	// storeKeyNames := make([]string, 0, len(storeKeys))
+	// for _, storeKey := range storeKeys {
+	// 	storeKeyName := storeKey.Name()
+	// 	storeKeyNames = append(storeKeyNames, storeKeyName)
+	// 	storeToLoadFrom[storeKeyName] = previousCMS.GetKVStore(storeKey)
+	// 	storeKeyToSMT[storeKeyName] = previousCMS.GetSubstoreSMT(storeKeyName).GetTree()
+	// 	storeKeyToSubstoreTraceBuf[storeKeyName] = &bytes.Buffer{}
+	// }
+
+	// // BaseApp, B1
+	// options := []AppOption{
+	// 	SetSubstoreTracer(storeTraceBuf),
+	// }
+
+	// for _, storeKey := range storeKeys {
+	// 	if substoreBuf, exists := storeKeyToSubstoreTraceBuf[storeKey.Name()]; exists {
+	// 		options = append(options, SetTracerFor(storeKey.Name(), substoreBuf))
+	// 	}
+	// 	if routerOpt, exists := routerOpts[(storeKey.Name())]; exists {
+	// 		options = append(options, AppOptionFunc(routerOpt))
+	// 	}
+	// }
+	// newApp, err := SetupBaseAppFromParams(app.name+"WithTracing", app.logger, dbm.NewMemDB(), app.txDecoder, storeKeyNames, storeKeyToSMT, app.LastBlockHeight(), storeToLoadFrom, options...)
+
+	// // Need to reset all the buffers to remove anything logged while setting up baseapp
+	// storeTraceBuf.Reset()
+	// for _, storeKey := range storeKeys {
+	// 	storeKeyToSubstoreTraceBuf[storeKey.Name()].Reset()
+	// }
+	// return newApp, storeKeyToSubstoreTraceBuf, err
 }
+
+// // set up a new baseapp from given params
+// func SetupBaseAppFromParams(appName string, logger log.Logger, db dbm.DB, txDecoder sdk.TxDecoder, storeKeyNames []string, storeKeyToSMT map[string]*smtlib.SparseMerkleTree, blockHeight int64, storeToLoadFrom map[string]types.KVStore, options ...AppOption) (*BaseApp, error) {
+// 	storeKeys := make([]storetypes.StoreKey, 0, len(storeKeyNames))
+// 	storeKeyToSubstoreHash := make(map[string][]byte)
+// 	for _, storeKeyName := range storeKeyNames {
+// 		storeKey := sdk.NewKVStoreKey(storeKeyName)
+// 		storeKeys = append(storeKeys, storeKey)
+// 		subStore := storeToLoadFrom[storeKeyName]
+// 		it := subStore.Iterator(nil, nil)
+// 		substoreSMT := storeKeyToSMT[storeKeyName]
+// 		for ; it.Valid(); it.Next() {
+// 			key, val := it.Key(), it.Value()
+// 			proof, err := substoreSMT.Prove(key)
+// 			if err != nil {
+// 				return nil, err
+// 			}
+// 			options = append(options, SetDeepSMTBranchKVPair(storeKey, substoreSMT.Root(), proof, key, val))
+// 		}
+// 		storeKeyToSubstoreHash[storeKeyName] = substoreSMT.Root()
+// 	}
+
+// 	options = append(options, SetSubstoresWithRoots(storeKeyToSubstoreHash, storeKeys...))
+
+// 	// This initial height is used in `BeginBlock` in `validateHeight`
+// 	options = append(options, SetInitialHeight(blockHeight))
+
+// 	// make list of options to pass by parsing fraudproof
+// 	app := NewBaseApp(appName, logger, db, txDecoder, options...)
+// 	// stores are mounted
+// 	err := app.Init()
+
+// 	return app, err
+// }
+
+// // set up a new baseapp from a fraudproof
+// func SetupBaseAppFromFraudProof(appName string, logger log.Logger, db dbm.DB, txDecoder sdk.TxDecoder, fraudProof FraudProof, options ...func(*BaseApp)) (*BaseApp, error) {
+// 	storeKeyToSMT, err := fraudProof.getSubstoreSMTs()
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	return SetupBaseAppFromParams(appName, logger, db, txDecoder, fraudProof.getModules(), storeKeyToSMT, fraudProof.blockHeight, fraudProof.extractStore(), options...)
+// }

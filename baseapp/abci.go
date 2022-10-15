@@ -143,6 +143,74 @@ func (app *BaseApp) GetAppHash(req abci.RequestGetAppHash) (res abci.ResponseGet
 }
 
 func (app *BaseApp) GenerateFraudProof(req abci.RequestGenerateFraudProof) (res abci.ResponseGenerateFraudProof) {
+	// Get an app with tracing with block reverted to previous state
+	_ = app.cms.(*rootmulti.Store)
+
+	/*
+		appWithTracing, storeKeyToSubstoreTraceBuf, err := app.enableFraudProofGenerationMode(cms.GetStoreKeys(), app.routerOpts)
+		if err != nil {
+			panic(err)
+		}
+
+		// Run this tracing-enabled app through the set of all nonFradulent and fraudulent state transitions
+		beginBlockRequest := req.BeginBlockRequest
+		beginBlockRequest.Header.Height = 1
+		isBeginBlockFraudulent := req.DeliverTxRequests == nil
+		isDeliverTxFraudulent := req.EndBlockRequest == nil
+		appWithTracing.BeginBlock(beginBlockRequest)
+		if !isBeginBlockFraudulent {
+			// BeginBlock is not the fraudulent state transition
+			appWithTracing.executeNonFraudulentTransactions(req)
+
+			// Remove traces made by all non-fraudulent state transitions
+			for _, buf := range storeKeyToSubstoreTraceBuf {
+				buf.Reset()
+			}
+
+			// Record the trace made by the fraudulent state transitions
+			if isDeliverTxFraudulent {
+				// The last DeliverTx is the fraudulent state transition
+				fraudulentDeliverTx := req.DeliverTxRequests[len(req.DeliverTxRequests)-1]
+				appWithTracing.DeliverTx(*fraudulentDeliverTx)
+			} else {
+				// EndBlock is the fraudulent state transition
+				appWithTracing.EndBlock(*req.EndBlockRequest)
+			}
+		}
+
+		// SubStore trace buffers now record the trace made by the fradulent state transition
+
+		// Get a new app with block reverted to previous state
+		appFraudGen, _, err := app.enableFraudProofGenerationMode(cms.GetStoreKeys(), app.routerOpts)
+		if err != nil {
+			panic(err)
+		}
+
+		// Fast-forward to right before fradulent state transition occured
+		appFraudGen.BeginBlock(beginBlockRequest)
+		if !isBeginBlockFraudulent {
+			appFraudGen.executeNonFraudulentTransactions(req)
+		}
+
+		// Export the app's current trace-filtered state into a Fraud Proof and return it
+		fraudProof, err := appFraudGen.getFraudProof(storeKeyToSubstoreTraceBuf, app.LastBlockHeight())
+		if err != nil {
+			panic(err)
+		}
+
+		if isBeginBlockFraudulent {
+			fraudProof.fraudulentBeginBlock = &beginBlockRequest
+		} else if isDeliverTxFraudulent {
+			fraudProof.fraudulentDeliverTx = req.DeliverTxRequests[len(req.DeliverTxRequests)-1]
+		} else {
+			fraudProof.fraudulentEndBlock = req.EndBlockRequest
+		}
+		abciFraudProof := fraudProof.toABCI()
+		res = abci.ResponseGenerateFraudProof{
+			FraudProof: &abciFraudProof,
+		}
+		return res
+	*/
 	return abci.ResponseGenerateFraudProof{}
 }
 
