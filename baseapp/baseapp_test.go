@@ -2354,30 +2354,10 @@ func TestGenerateAndLoadFraudProof(t *testing.T) {
 	//TODO: Write iavl equivalent somehow
 	// storeHashB1 := appB1.cms.(*multi.Store).GetSubstoreSMT(capKey2.Name()).Root()
 
-	routerOpts := make(map[string]func(*BaseApp))
-	newRouterOpt := func(bapp *BaseApp) {
-		bapp.Router().AddRoute(sdk.NewRoute(routeMsgKeyValue, func(ctx sdk.Context, msg sdk.Msg) (*sdk.Result, error) {
-			kv := msg.(*msgKeyValue)
-			cms := bapp.cms.(*rootmulti.Store)
-			sKeys := cms.GetStoreKeys()
-			largestKey := sKeys[0]
-			for _, sKey := range sKeys[1:] {
-				if sKey.Name() > largestKey.Name() {
-					largestKey = sKey
-				}
-			}
-			bapp.cms.GetKVStore(largestKey).Set(kv.Key, kv.Value)
-			return &sdk.Result{}, nil
-		}))
-	}
-	routerOpts[capKey2.Name()] = newRouterOpt
-
-	// THINK: No routerOpts in this baseapp version, how do I bypass this requirement?
-	resp := appB1.generateFraudProofWithRouterOpts(
+	resp := appB1.GenerateFraudProof(
 		abci.RequestGenerateFraudProof{
 			BeginBlockRequest: *beginRequest, DeliverTxRequests: append(nonFraudulentDeliverRequests, fraudDeliverRequest), EndBlockRequest: nil,
 		},
-		routerOpts,
 	)
 
 	// Light Client
