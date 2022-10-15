@@ -853,17 +853,14 @@ func (app *BaseApp) getFraudProof() (FraudProof, error) {
 	for _, storeKey := range storeKeys {
 		if subStoreTraceBuf := cms.GetTracerBufferFor(storeKey.Name()); subStoreTraceBuf != nil {
 			keys := cms.GetKVStore(storeKey).(*tracekv.Store).GetAllKeysUsedInTrace(*subStoreTraceBuf)
-			iavlTree, err := cms.GetIAVLTree(storeKey.Name())
+			iavlTree, err := cms.GetIAVLStore(storeKey.Name())
 			if err != nil {
 				return FraudProof{}, err
 			}
 			if iavlTree.LastCommitID().Hash == nil {
 				continue
 			}
-			proof, err := cms.GetStoreProof(storeKey.Name())
-			if err != nil {
-				return FraudProof{}, err
-			}
+			proof := cms.GetStoreProof(storeKey.Name())
 			stateWitness := StateWitness{
 				Proof:       *proof,
 				RootHash:    iavlTree.LastCommitID().Hash,

@@ -29,6 +29,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/store/transient"
 	"github.com/cosmos/cosmos-sdk/store/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
+	tmcrypto "github.com/tendermint/tendermint/proto/tendermint/crypto"
 )
 
 const (
@@ -1049,8 +1050,8 @@ func (rs *Store) flushMetadata(db dbm.DB, version int64, cInfo *types.CommitInfo
 	rs.logger.Debug("flushing metadata finished", "height", version)
 }
 
-func (s *Store) GetAppHash() []byte {
-	return s.LastCommitID().Hash
+func (rs *Store) GetAppHash() []byte {
+	return rs.LastCommitID().Hash
 }
 
 type storeParams struct {
@@ -1154,10 +1155,15 @@ func flushLatestVersion(batch dbm.Batch, version int64) {
 	batch.Set([]byte(latestVersionKey), bz)
 }
 
-func (s *Store) GetIAVLTree(key string) (*iavl.Store, error) {
-	store := s.GetStoreByName(key)
+func (rs *Store) GetIAVLStore(key string) (*iavl.Store, error) {
+	store := rs.GetStoreByName(key)
 	if store.GetStoreType() != types.StoreTypeIAVL {
 		return nil, fmt.Errorf("non-IAVL store not supported")
 	}
 	return store.(*iavl.Store), nil
+}
+
+func (rs *Store) GetStoreProof(storeKeyName string) *tmcrypto.ProofOp {
+	proofOp := rs.lastCommitInfo.ProofOp(storeKeyName)
+	return &proofOp
 }
