@@ -128,7 +128,7 @@ func (fraudProof *FraudProof) verifyFraudProof() (bool, error) {
 			if !bytes.Equal(key, proofOp.GetKey()) {
 				return false, fmt.Errorf("got key: %s, expected: %s for storeKey: %s", string(key), string(proof.GetKey()), storeKey)
 			}
-			proof, err := smt.ProofDecoder(proofOp)
+			proof, err := types.CommitmentOpDecoder(proofOp)
 			if err != nil {
 				return false, err
 			}
