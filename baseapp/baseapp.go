@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/cosmos/iavl"
 	"github.com/gogo/protobuf/proto"
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto/tmhash"
@@ -14,7 +15,6 @@ import (
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/snapshots"
 	"github.com/cosmos/cosmos-sdk/store"
-	"github.com/cosmos/cosmos-sdk/store/iavl"
 	"github.com/cosmos/cosmos-sdk/store/rootmulti"
 	"github.com/cosmos/cosmos-sdk/store/tracekv"
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
@@ -900,40 +900,22 @@ func (app *BaseApp) getFraudProof() (FraudProof, error) {
 }
 
 // set up a new baseapp from given params
-func SetupBaseAppFromParams(appName string, logger log.Logger, db dbm.DB, txDecoder sdk.TxDecoder, storeKeyNames []string, storeKeyToIAVLTree map[string]*iavl.Store, blockHeight int64, storeToLoadFrom map[string]types.KVStore, options ...AppOption) (*BaseApp, error) {
+func SetupBaseAppFromParams(appName string, logger log.Logger, db dbm.DB, txDecoder sdk.TxDecoder, storeKeyNames []string, storeKeyToIAVLTree map[string]*iavl.MutableTree, blockHeight int64, options ...func(*BaseApp)) (*BaseApp, error) {
 	storeKeys := make([]storetypes.StoreKey, 0, len(storeKeyNames))
-	storeKeyToSubstoreHash := make(map[string][]byte)
 	for _, storeKeyName := range storeKeyNames {
-		storeKey := sdk.NewKVStoreKey(storeKeyName)
-		storeKeys = append(storeKeys, storeKey)
-		subStore := storeToLoadFrom[storeKeyName]
-		it := subStore.Iterator(nil, nil)
+		storeKeys = append(storeKeys, sdk.NewKVStoreKey(storeKeyName))
 		iavlTree := storeKeyToIAVLTree[storeKeyName]
-		for ; it.Valid(); it.Next() {
-			key, val := it.Key(), it.Value()
-			proof, err := iavlTree.Prove(key)
-			if err != nil {
-				return nil, err
-			}
-			options = append(options, SetDeepSMTBranchKVPair(storeKey, iavlTree.Root(), proof, key, val))
-		}
-		rootHash, err := iavlTree.Root()
-		if err != nil {
-			return nil, err
-		}
-		storeKeyToSubstoreHash[storeKeyName] = rootHash
+		options = append(options, SetDeepIAVLTree(storeKeyName, iavlTree))
 	}
-
-	options = append(options, SetSubstoresWithRoots(storeKeyToSubstoreHash, storeKeys...))
-
 	// This initial height is used in `BeginBlock` in `validateHeight`
 	options = append(options, SetInitialHeight(blockHeight))
 
-	// make list of options to pass by parsing fraudproof
 	app := NewBaseApp(appName, logger, db, txDecoder, options...)
-	// stores are mounted
-	err := app.Init()
 
+	// stores are mounted
+	app.MountStores(storeKeys...)
+
+	err := app.LoadLatestVersion()
 	return app, err
 }
 
@@ -943,5 +925,5 @@ func SetupBaseAppFromFraudProof(appName string, logger log.Logger, db dbm.DB, tx
 	if err != nil {
 		return nil, err
 	}
-	return SetupBaseAppFromParams(appName, logger, db, txDecoder, fraudProof.getModules(), storeKeyToIAVLTree, fraudProof.blockHeight, fraudProof.extractStore(), options...)
+	return SetupBaseAppFromParams(appName, logger, db, txDecoder, fraudProof.getModules(), storeKeyToIAVLTree, fraudProof.blockHeight, options...)
 }

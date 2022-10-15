@@ -361,6 +361,13 @@ func (rs *Store) SetInterBlockCache(c types.MultiStorePersistentCache) {
 	rs.interBlockCache = c
 }
 
+func (rs *Store) SetDeepIAVLTree(skey string, iavlTree *iavltree.MutableTree) {
+	key := rs.keysByName[skey]
+	storeParams := rs.storesParams[key]
+	storeParams.deepIAVLTree = iavlTree
+	rs.storesParams[key] = storeParams
+}
+
 // SetTracer sets the tracer for the MultiStore that the underlying
 // stores will utilize to trace operations. A MultiStore is returned.
 func (rs *Store) SetTracer(w io.Writer) types.MultiStore {
@@ -1081,6 +1088,8 @@ type storeParams struct {
 	db             dbm.DB
 	typ            types.StoreType
 	initialVersion uint64
+
+	deepIAVLTree *iavltree.MutableTree
 
 	traceWriter io.Writer
 }

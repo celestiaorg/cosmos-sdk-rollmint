@@ -5,10 +5,9 @@ import (
 	"crypto/sha256"
 	"fmt"
 
-	"github.com/cosmos/cosmos-sdk/store/iavl"
-	"github.com/cosmos/cosmos-sdk/store/mem"
 	"github.com/cosmos/cosmos-sdk/store/types"
 	"github.com/cosmos/cosmos-sdk/store/v2alpha1/smt"
+	iavltree "github.com/cosmos/iavl"
 	abci "github.com/tendermint/tendermint/abci/types"
 	tmcrypto "github.com/tendermint/tendermint/proto/tendermint/crypto"
 )
@@ -57,8 +56,8 @@ func (fraudProof *FraudProof) getModules() []string {
 	return keys
 }
 
-func (fraudProof *FraudProof) getDeepIAVLTrees() (map[string]*iavl.Store, error) {
-	storeKeyToIAVLTree := make(map[string]*iavl.Store)
+func (fraudProof *FraudProof) getDeepIAVLTrees() (map[string]*iavltree.MutableTree, error) {
+	storeKeyToIAVLTree := make(map[string]*iavltree.MutableTree)
 	for storeKey, stateWitness := range fraudProof.stateWitness {
 		rootHash := stateWitness.RootHash
 		// TODO(manav): Replace with IAVL Deep Subtrees once implementation is done
@@ -74,22 +73,9 @@ func (fraudProof *FraudProof) getDeepIAVLTrees() (map[string]*iavl.Store, error)
 			substoreDeepSMT.AddBranch(smtProof, key, val)
 		}
 		// TODO(manav): Replace with actual iavl stores
-		storeKeyToIAVLTree[storeKey] = &iavl.Store{}
+		storeKeyToIAVLTree[storeKey] = &iavltree.MutableTree{}
 	}
 	return storeKeyToIAVLTree, nil
-}
-
-func (fraudProof *FraudProof) extractStore() map[string]types.KVStore {
-	store := make(map[string]types.KVStore)
-	for storeKey, stateWitness := range fraudProof.stateWitness {
-		subStore := mem.NewStore()
-		for _, witnessData := range stateWitness.WitnessData {
-			key, val := witnessData.Key, witnessData.Value
-			subStore.Set(key, val)
-		}
-		store[storeKey] = subStore
-	}
-	return store
 }
 
 // Returns true only if only one of the three pointers is nil
