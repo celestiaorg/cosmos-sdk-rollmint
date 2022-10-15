@@ -100,6 +100,12 @@ func (cms Store) SetTracer(w io.Writer) types.MultiStore {
 	return cms
 }
 
+// SetTracerFor sets the tracer for a particular underlying store in the
+// Multistore that will utilize to trace operations. A MultiStore is returned.
+func (cms Store) SetTracerFor(_ string, _ io.Writer) types.MultiStore {
+	return cms
+}
+
 // SetTracingContext updates the tracing context for the MultiStore by merging
 // the given context with the existing context by key. Any existing keys will
 // be overwritten. It is implied that the caller should update the context when

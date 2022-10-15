@@ -2311,8 +2311,8 @@ func TestGenerateAndLoadFraudProof(t *testing.T) {
 		4. Bad block, fraud proof needed, fraud proof works, chain halts (happy case)
 	*/
 
-	// storeTraceBuf := &bytes.Buffer{}
-	// subStoreTraceBuf := &bytes.Buffer{}
+	storeTraceBuf := &bytes.Buffer{}
+	subStoreTraceBuf := &bytes.Buffer{}
 
 	routerOpt := func(bapp *BaseApp) {
 		bapp.Router().AddRoute(sdk.NewRoute(routeMsgKeyValue, func(ctx sdk.Context, msg sdk.Msg) (*sdk.Result, error) {
@@ -2325,10 +2325,9 @@ func TestGenerateAndLoadFraudProof(t *testing.T) {
 	// BaseApp, B1
 	appB1 := setupBaseApp(t,
 		routerOpt,
-		// TODO: Write IAVL equivalent options somehow
-		// SetSubstoreTracer(storeTraceBuf),
-		// SetTracerFor(capKey2.Name(), subStoreTraceBuf),
 	)
+	appB1.SetCommitMultiStoreTracer(storeTraceBuf)
+	appB1.SetCommitKVStoreTracer(capKey2.Name(), subStoreTraceBuf)
 
 	// B1 <- S0
 	appB1.InitChain(abci.RequestInitChain{})

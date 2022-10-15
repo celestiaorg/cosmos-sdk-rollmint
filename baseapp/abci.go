@@ -144,13 +144,12 @@ func (app *BaseApp) GetAppHash(req abci.RequestGetAppHash) (res abci.ResponseGet
 
 func (app *BaseApp) GenerateFraudProof(req abci.RequestGenerateFraudProof) (res abci.ResponseGenerateFraudProof) {
 	// Get an app with tracing with block reverted to previous state
-	_ = app.cms.(*rootmulti.Store)
-
+	cms := app.cms.(*rootmulti.Store)
+	err := cms.LoadLastVersion()
+	if err != nil {
+		panic(err)
+	}
 	/*
-		appWithTracing, storeKeyToSubstoreTraceBuf, err := app.enableFraudProofGenerationMode(cms.GetStoreKeys(), app.routerOpts)
-		if err != nil {
-			panic(err)
-		}
 
 		// Run this tracing-enabled app through the set of all nonFradulent and fraudulent state transitions
 		beginBlockRequest := req.BeginBlockRequest
