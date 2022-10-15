@@ -1153,3 +1153,11 @@ func flushLatestVersion(batch dbm.Batch, version int64) {
 
 	batch.Set([]byte(latestVersionKey), bz)
 }
+
+func (s *Store) GetIAVLTree(key string) (*iavl.Store, error) {
+	store := s.GetStoreByName(key)
+	if store.GetStoreType() != types.StoreTypeIAVL {
+		return nil, fmt.Errorf("non-IAVL store not supported")
+	}
+	return store.(*iavl.Store), nil
+}

@@ -853,8 +853,11 @@ func (app *BaseApp) getFraudProof() (FraudProof, error) {
 	for _, storeKey := range storeKeys {
 		if subStoreTraceBuf := cms.GetTracerBufferFor(storeKey.Name()); subStoreTraceBuf != nil {
 			keys := cms.GetKVStore(storeKey).(*tracekv.Store).GetAllKeysUsedInTrace(*subStoreTraceBuf)
-			smt := cms.GetSubstoreSMT(storeKey.Name())
-			if smt.Root() == nil {
+			iavlTree, err := cms.GetIAVLTree(storeKey.Name())
+			if err != nil {
+				return FraudProof{}, err
+			}
+			if iavlTree.LastCommitID().Hash == nil {
 				continue
 			}
 			proof, err := cms.GetStoreProof(storeKey.Name())
@@ -863,15 +866,15 @@ func (app *BaseApp) getFraudProof() (FraudProof, error) {
 			}
 			stateWitness := StateWitness{
 				Proof:       *proof,
-				RootHash:    smt.Root(),
+				RootHash:    iavlTree.LastCommitID().Hash,
 				WitnessData: make([]WitnessData, 0),
 			}
 			for key := range keys {
 				bKey := []byte(key)
-				has := smt.Has(bKey)
+				has := iavlTree.Has(bKey)
 				if has {
-					value := smt.Get(bKey)
-					proof, err := smt.GetProof(bKey)
+					value := iavlTree.Get(bKey)
+					proof, err := iavlTree.GetProof(bKey)
 					if err != nil {
 						return FraudProof{}, err
 					}
