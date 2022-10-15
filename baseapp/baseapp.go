@@ -14,6 +14,7 @@ import (
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/snapshots"
 	"github.com/cosmos/cosmos-sdk/store"
+	"github.com/cosmos/cosmos-sdk/store/iavl"
 	"github.com/cosmos/cosmos-sdk/store/rootmulti"
 	"github.com/cosmos/cosmos-sdk/store/tracekv"
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
@@ -894,45 +895,49 @@ func (app *BaseApp) getFraudProof() (FraudProof, error) {
 	return fraudProof, nil
 }
 
-// // set up a new baseapp from given params
-// func SetupBaseAppFromParams(appName string, logger log.Logger, db dbm.DB, txDecoder sdk.TxDecoder, storeKeyNames []string, storeKeyToSMT map[string]*smtlib.SparseMerkleTree, blockHeight int64, storeToLoadFrom map[string]types.KVStore, options ...AppOption) (*BaseApp, error) {
-// 	storeKeys := make([]storetypes.StoreKey, 0, len(storeKeyNames))
-// 	storeKeyToSubstoreHash := make(map[string][]byte)
-// 	for _, storeKeyName := range storeKeyNames {
-// 		storeKey := sdk.NewKVStoreKey(storeKeyName)
-// 		storeKeys = append(storeKeys, storeKey)
-// 		subStore := storeToLoadFrom[storeKeyName]
-// 		it := subStore.Iterator(nil, nil)
-// 		substoreSMT := storeKeyToSMT[storeKeyName]
-// 		for ; it.Valid(); it.Next() {
-// 			key, val := it.Key(), it.Value()
-// 			proof, err := substoreSMT.Prove(key)
-// 			if err != nil {
-// 				return nil, err
-// 			}
-// 			options = append(options, SetDeepSMTBranchKVPair(storeKey, substoreSMT.Root(), proof, key, val))
-// 		}
-// 		storeKeyToSubstoreHash[storeKeyName] = substoreSMT.Root()
-// 	}
+// set up a new baseapp from given params
+func SetupBaseAppFromParams(appName string, logger log.Logger, db dbm.DB, txDecoder sdk.TxDecoder, storeKeyNames []string, storeKeyToIAVLTree map[string]*iavl.Store, blockHeight int64, storeToLoadFrom map[string]types.KVStore, options ...AppOption) (*BaseApp, error) {
+	storeKeys := make([]storetypes.StoreKey, 0, len(storeKeyNames))
+	storeKeyToSubstoreHash := make(map[string][]byte)
+	for _, storeKeyName := range storeKeyNames {
+		storeKey := sdk.NewKVStoreKey(storeKeyName)
+		storeKeys = append(storeKeys, storeKey)
+		subStore := storeToLoadFrom[storeKeyName]
+		it := subStore.Iterator(nil, nil)
+		iavlTree := storeKeyToIAVLTree[storeKeyName]
+		for ; it.Valid(); it.Next() {
+			key, val := it.Key(), it.Value()
+			proof, err := iavlTree.Prove(key)
+			if err != nil {
+				return nil, err
+			}
+			options = append(options, SetDeepSMTBranchKVPair(storeKey, iavlTree.Root(), proof, key, val))
+		}
+		rootHash, err := iavlTree.Root()
+		if err != nil {
+			return nil, err
+		}
+		storeKeyToSubstoreHash[storeKeyName] = rootHash
+	}
 
-// 	options = append(options, SetSubstoresWithRoots(storeKeyToSubstoreHash, storeKeys...))
+	options = append(options, SetSubstoresWithRoots(storeKeyToSubstoreHash, storeKeys...))
 
-// 	// This initial height is used in `BeginBlock` in `validateHeight`
-// 	options = append(options, SetInitialHeight(blockHeight))
+	// This initial height is used in `BeginBlock` in `validateHeight`
+	options = append(options, SetInitialHeight(blockHeight))
 
-// 	// make list of options to pass by parsing fraudproof
-// 	app := NewBaseApp(appName, logger, db, txDecoder, options...)
-// 	// stores are mounted
-// 	err := app.Init()
+	// make list of options to pass by parsing fraudproof
+	app := NewBaseApp(appName, logger, db, txDecoder, options...)
+	// stores are mounted
+	err := app.Init()
 
-// 	return app, err
-// }
+	return app, err
+}
 
-// // set up a new baseapp from a fraudproof
-// func SetupBaseAppFromFraudProof(appName string, logger log.Logger, db dbm.DB, txDecoder sdk.TxDecoder, fraudProof FraudProof, options ...func(*BaseApp)) (*BaseApp, error) {
-// 	storeKeyToSMT, err := fraudProof.getSubstoreSMTs()
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	return SetupBaseAppFromParams(appName, logger, db, txDecoder, fraudProof.getModules(), storeKeyToSMT, fraudProof.blockHeight, fraudProof.extractStore(), options...)
-// }
+// set up a new baseapp from a fraudproof
+func SetupBaseAppFromFraudProof(appName string, logger log.Logger, db dbm.DB, txDecoder sdk.TxDecoder, fraudProof FraudProof, options ...func(*BaseApp)) (*BaseApp, error) {
+	storeKeyToIAVLTree, err := fraudProof.getDeepIAVLTrees()
+	if err != nil {
+		return nil, err
+	}
+	return SetupBaseAppFromParams(appName, logger, db, txDecoder, fraudProof.getModules(), storeKeyToIAVLTree, fraudProof.blockHeight, fraudProof.extractStore(), options...)
+}

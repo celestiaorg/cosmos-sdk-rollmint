@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 
+	"github.com/cosmos/cosmos-sdk/store/iavl"
 	"github.com/cosmos/cosmos-sdk/store/mem"
 	"github.com/cosmos/cosmos-sdk/store/types"
 	"github.com/cosmos/cosmos-sdk/store/v2alpha1/smt"
@@ -56,23 +57,26 @@ func (fraudProof *FraudProof) getModules() []string {
 	return keys
 }
 
-func (fraudProof *FraudProof) getSubstoreSMTs() (map[string]*smtlib.SparseMerkleTree, error) {
-	storeKeyToSMT := make(map[string]*smtlib.SparseMerkleTree)
+func (fraudProof *FraudProof) getDeepIAVLTrees() (map[string]*iavl.Store, error) {
+	storeKeyToIAVLTree := make(map[string]*iavl.Store)
 	for storeKey, stateWitness := range fraudProof.stateWitness {
 		rootHash := stateWitness.RootHash
+		// TODO(manav): Replace with IAVL Deep Subtrees once implementation is done
 		substoreDeepSMT := smtlib.NewDeepSparseMerkleSubTree(smtlib.NewSimpleMap(), smtlib.NewSimpleMap(), sha256.New(), rootHash)
 		for _, witnessData := range stateWitness.WitnessData {
 			proofOp, key, val := witnessData.Proof, witnessData.Key, witnessData.Value
-			proof, err := smt.ProofDecoder(proofOp)
+			proof, err := types.CommitmentOpDecoder(proofOp)
 			if err != nil {
 				return nil, err
 			}
+			// TODO(manav): Replace with an IAVL proof instead of SMT here
 			smtProof := proof.(*smt.ProofOp).GetProof()
 			substoreDeepSMT.AddBranch(smtProof, key, val)
 		}
-		storeKeyToSMT[storeKey] = substoreDeepSMT.SparseMerkleTree
+		// TODO(manav): Replace with actual iavl stores
+		storeKeyToIAVLTree[storeKey] = &iavl.Store{}
 	}
-	return storeKeyToSMT, nil
+	return storeKeyToIAVLTree, nil
 }
 
 func (fraudProof *FraudProof) extractStore() map[string]types.KVStore {
