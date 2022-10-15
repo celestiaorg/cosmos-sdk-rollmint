@@ -193,23 +193,23 @@ func (app *BaseApp) GenerateFraudProof(req abci.RequestGenerateFraudProof) (res 
 		app.executeNonFraudulentTransactions(req)
 	}
 
-	// // Export the app's current trace-filtered state into a Fraud Proof and return it
-	// fraudProof, err := appFraudGen.getFraudProof(storeKeyToSubstoreTraceBuf, app.LastBlockHeight())
-	// if err != nil {
-	// 	panic(err)
-	// }
+	// Export the app's current trace-filtered state into a Fraud Proof and return it
+	fraudProof, err := app.getFraudProof()
+	if err != nil {
+		panic(err)
+	}
 
-	// if isBeginBlockFraudulent {
-	// 	fraudProof.fraudulentBeginBlock = &beginBlockRequest
-	// } else if isDeliverTxFraudulent {
-	// 	fraudProof.fraudulentDeliverTx = req.DeliverTxRequests[len(req.DeliverTxRequests)-1]
-	// } else {
-	// 	fraudProof.fraudulentEndBlock = req.EndBlockRequest
-	// }
-	// abciFraudProof := fraudProof.toABCI()
-	// res = abci.ResponseGenerateFraudProof{
-	// 	FraudProof: &abciFraudProof,
-	// }
+	if isBeginBlockFraudulent {
+		fraudProof.fraudulentBeginBlock = &beginBlockRequest
+	} else if isDeliverTxFraudulent {
+		fraudProof.fraudulentDeliverTx = req.DeliverTxRequests[len(req.DeliverTxRequests)-1]
+	} else {
+		fraudProof.fraudulentEndBlock = req.EndBlockRequest
+	}
+	abciFraudProof := fraudProof.toABCI()
+	res = abci.ResponseGenerateFraudProof{
+		FraudProof: &abciFraudProof,
+	}
 	return abci.ResponseGenerateFraudProof{}
 }
 

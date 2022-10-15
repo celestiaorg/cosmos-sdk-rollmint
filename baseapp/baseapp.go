@@ -15,7 +15,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/snapshots"
 	"github.com/cosmos/cosmos-sdk/store"
 	"github.com/cosmos/cosmos-sdk/store/rootmulti"
-	"github.com/cosmos/cosmos-sdk/store/types"
+	"github.com/cosmos/cosmos-sdk/store/tracekv"
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
@@ -838,6 +838,53 @@ func (app *BaseApp) runMsgs(ctx sdk.Context, msgs []sdk.Msg, mode runTxMode) (*s
 // makeABCIData generates the Data field to be sent to ABCI Check/DeliverTx.
 func makeABCIData(msgResponses []*codectypes.Any) ([]byte, error) {
 	return proto.Marshal(&sdk.TxMsgData{MsgResponses: msgResponses})
+}
+
+// Generate a fraudproof for an app with the given trace buffers
+func (app *BaseApp) getFraudProof() (FraudProof, error) {
+	fraudProof := FraudProof{}
+	fraudProof.stateWitness = make(map[string]StateWitness)
+	fraudProof.blockHeight = app.LastBlockHeight()
+	cms := app.cms.(*rootmulti.Store)
+
+	appHash := cms.GetAppHash()
+	fraudProof.appHash = appHash
+	storeKeys := cms.GetStoreKeys()
+	for _, storeKey := range storeKeys {
+		if subStoreTraceBuf := cms.GetTracerBufferFor(storeKey.Name()); subStoreTraceBuf != nil {
+			keys := cms.GetKVStore(storeKey).(*tracekv.Store).GetAllKeysUsedInTrace(*subStoreTraceBuf)
+			smt := cms.GetSubstoreSMT(storeKey.Name())
+			if smt.Root() == nil {
+				continue
+			}
+			proof, err := cms.GetStoreProof(storeKey.Name())
+			if err != nil {
+				return FraudProof{}, err
+			}
+			stateWitness := StateWitness{
+				Proof:       *proof,
+				RootHash:    smt.Root(),
+				WitnessData: make([]WitnessData, 0),
+			}
+			for key := range keys {
+				bKey := []byte(key)
+				has := smt.Has(bKey)
+				if has {
+					value := smt.Get(bKey)
+					proof, err := smt.GetProof(bKey)
+					if err != nil {
+						return FraudProof{}, err
+					}
+					bVal := []byte(value)
+					witnessData := WitnessData{bKey, bVal, proof.GetOps()[0]}
+					stateWitness.WitnessData = append(stateWitness.WitnessData, witnessData)
+				}
+			}
+			fraudProof.stateWitness[storeKey.Name()] = stateWitness
+		}
+	}
+
+	return fraudProof, nil
 }
 
 // // set up a new baseapp from given params

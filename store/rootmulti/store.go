@@ -367,13 +367,27 @@ func (rs *Store) SetTracer(w io.Writer) types.MultiStore {
 }
 
 // SetTracerFor sets the tracer for a particular underlying store in the
-// Multistore that will utilize to trace operations. A MultiStore is returned.
+// Multistore that it will utilize to trace operations. A MultiStore is returned.
 func (rs *Store) SetTracerFor(skey string, w io.Writer) types.MultiStore {
 	key := rs.keysByName[skey]
 	storeParams := rs.storesParams[key]
 	storeParams.traceWriter = w
 	rs.storesParams[key] = storeParams
 	return rs
+}
+
+// GetTracerFor gets the tracer for a particular underlying store in the
+// Multistore that it will utilize to trace operations. A MultiStore is returned.
+func (rs *Store) GetTracerBufferFor(skey string) *bytes.Buffer {
+	key := rs.keysByName[skey]
+	storeParams, exists := rs.storesParams[key]
+	if exists {
+		buf, ok := storeParams.traceWriter.(*bytes.Buffer)
+		if ok {
+			return buf
+		}
+	}
+	return nil
 }
 
 func (rs *Store) ResetAllTraceWriters() {
