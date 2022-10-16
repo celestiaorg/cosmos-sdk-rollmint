@@ -50,6 +50,10 @@ func (ms multiStore) SetTracer(w io.Writer) sdk.MultiStore {
 	panic("not implemented")
 }
 
+func (ms multiStore) SetTracerFor(skey string, w io.Writer) sdk.MultiStore {
+	panic("not implemented")
+}
+
 func (ms multiStore) AddListeners(key storetypes.StoreKey, listeners []storetypes.WriteListener) {
 	panic("not implemented")
 }
