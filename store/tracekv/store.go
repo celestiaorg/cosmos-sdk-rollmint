@@ -7,6 +7,7 @@ import (
 	"errors"
 	"io"
 
+	sdkerrors "cosmossdk.io/errors"
 	"github.com/chrispappas/golang-generics-set/set"
 	"github.com/cosmos/cosmos-sdk/store/types"
 )
@@ -112,7 +113,7 @@ func (tkv *Store) GetAllKeysUsedInTrace(buf bytes.Buffer) set.Set[string] {
 		}
 		key, err := base64.StdEncoding.DecodeString(traceOp.Key)
 		if err != nil {
-			panic(errors.Wrap(err, "failed to decode key read from buf"))
+			panic(sdkerrors.Wrap(err, "failed to decode key read from buf"))
 		}
 		keys.Add(string(key))
 	}
@@ -221,11 +222,11 @@ func writeOperation(w io.Writer, op operation, tc types.TraceContext, key, value
 
 	raw, err := json.Marshal(traceOp)
 	if err != nil {
-		panic(errors.Wrap(err, "failed to serialize trace operation"))
+		panic(sdkerrors.Wrap(err, "failed to serialize trace operation"))
 	}
 
 	if _, err := w.Write(raw); err != nil {
-		panic(errors.Wrap(err, "failed to write trace operation"))
+		panic(sdkerrors.Wrap(err, "failed to write trace operation"))
 	}
 
 	io.WriteString(w, "\n")
@@ -239,12 +240,12 @@ func readOperation(r *bytes.Buffer) (*traceOperation, error) {
 		return nil, ErrBufferEmpty
 	}
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to read trace operation")
+		return nil, sdkerrors.Wrap(err, "failed to read trace operation")
 	}
 	traceOp := traceOperation{}
 	err = json.Unmarshal([]byte(raw), &traceOp)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to deserialize trace operation")
+		return nil, sdkerrors.Wrap(err, "failed to deserialize trace operation")
 	}
 
 	return &traceOp, nil
