@@ -134,6 +134,8 @@ func (app *BaseApp) Info(req abci.RequestInfo) abci.ResponseInfo {
 	}
 }
 
+// GetAppHash implements the ABCI application interface. It returns an App Hash
+// whiich acts as a unique ID of the current state of the BaseApp.
 func (app *BaseApp) GetAppHash(req abci.RequestGetAppHash) (res abci.ResponseGetAppHash) {
 	cms := app.cms.(*rootmulti.Store)
 
@@ -154,11 +156,17 @@ func (app *BaseApp) executeNonFraudulentTransactions(req abci.RequestGenerateFra
 	}
 }
 
+// GenerateFraudProof implements the ABCI application interface. The BaseApp reverts to
+// previous state, runs the given fraudulent state transition, and gets the trace representing
+// the operations that this state transition makes. It then uses this trace to filter and export
+// the pre-fraudulent state transition execution state of the BaseApp and generates a Fraud Proof
+// representing it. It returns this generated Fraud Proof.
 func (app *BaseApp) GenerateFraudProof(req abci.RequestGenerateFraudProof) (res abci.ResponseGenerateFraudProof) {
 	// Revert app to previous state
 	cms := app.cms.(*rootmulti.Store)
 	err := cms.LoadLastVersion()
 	if err != nil {
+		// Happens when there is no last state to load form
 		panic(err)
 	}
 
@@ -218,6 +226,10 @@ func (app *BaseApp) GenerateFraudProof(req abci.RequestGenerateFraudProof) (res 
 	return res
 }
 
+// VerifyFraudProof implements the ABCI application interface. It loads a fresh BaseApp using
+// the given Fraud Proof, runs the given fraudulent state transition within the Fraud Proof,
+// and gets the app hash representing state of the resulting BaseApp. It returns a boolean
+// representing whether this app hash is equivalent to the expected app hash given.
 func (app *BaseApp) VerifyFraudProof(req abci.RequestVerifyFraudProof) (res abci.ResponseVerifyFraudProof) {
 	abciFraudProof := req.FraudProof
 	fraudProof := FraudProof{}
