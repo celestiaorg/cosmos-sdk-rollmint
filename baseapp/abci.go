@@ -149,8 +149,12 @@ func (app *BaseApp) GetAppHash(req abci.RequestGetAppHash) (res abci.ResponseGet
 	return res
 }
 
-func (app *BaseApp) executeNonFraudulentTransactions(req abci.RequestGenerateFraudProof) {
-	nonFraudulentRequests := req.DeliverTxRequests[:len(req.DeliverTxRequests)-1]
+func (app *BaseApp) executeNonFraudulentTransactions(req abci.RequestGenerateFraudProof, isDeliverTxFraudulent bool) {
+	numNonFraudulentRequests := len(req.DeliverTxRequests)
+	if isDeliverTxFraudulent {
+		numNonFraudulentRequests = numNonFraudulentRequests - 1
+	}
+	nonFraudulentRequests := req.DeliverTxRequests[:numNonFraudulentRequests]
 	for _, deliverTxRequest := range nonFraudulentRequests {
 		app.DeliverTx(*deliverTxRequest)
 	}
@@ -177,7 +181,7 @@ func (app *BaseApp) GenerateFraudProof(req abci.RequestGenerateFraudProof) (res 
 	app.BeginBlock(beginBlockRequest)
 	if !isBeginBlockFraudulent {
 		// BeginBlock is not the fraudulent state transition
-		app.executeNonFraudulentTransactions(req)
+		app.executeNonFraudulentTransactions(req, isDeliverTxFraudulent)
 
 		cms.ResetAllTraceWriters()
 
@@ -203,7 +207,7 @@ func (app *BaseApp) GenerateFraudProof(req abci.RequestGenerateFraudProof) (res 
 	// Fast-forward to right before fradulent state transition occured
 	app.BeginBlock(beginBlockRequest)
 	if !isBeginBlockFraudulent {
-		app.executeNonFraudulentTransactions(req)
+		app.executeNonFraudulentTransactions(req, isDeliverTxFraudulent)
 	}
 
 	// Export the app's current trace-filtered state into a Fraud Proof and return it
