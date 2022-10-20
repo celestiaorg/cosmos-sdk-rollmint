@@ -2296,18 +2296,19 @@ func TestGenerateAndLoadFraudProof(t *testing.T) {
 		Tests switch between a baseapp and fraudproof and covers parts of the fraudproof cycle. Steps:
 		1. Initialize a baseapp, B1, with some state, S0
 		2. Make some state transition to state S1 by doing some transactions, commit those transactions, and save
-		resulting SMT root hash
+		resulting root hash
 		3. Make another set of state transitions to state S2 but do not commit
 		4. Generate a fraudproof which should ignore the uncommitted set of transactions, and export S1 into a fraudProof data structure (minimal snapshot)
 		5. Verify the fraudproof and check verification passes (done in light client)
 		6. Load a fresh baseapp, B2, with the contents of fraud proof data structure from (4) so it can begin from state S1.
-		7. Check if the SMT root hashes of the new app with saved SMT root hash
+		7. Check if the root hashes of the new app with root hash
 
 		Tests to write in future:
 
 		1. Block with bad txs: Txs that exceed gas limits, validateBasic fails, unregistered messages (see TestRunInvalidTransaction)
 		2. Block with invalid appHash at the end
-		3. Corrupted Fraud Proof: bad SMT format, insufficient key-value pairs inside SMT needed to verify fraud
+		3. Corrupted Fraud Proof: bad underlying store format, insufficient key-value pairs inside the underlying store
+		   needed to verify fraud
 		4. Bad block, fraud proof needed, fraud proof works, chain halts (happy case)
 	*/
 
