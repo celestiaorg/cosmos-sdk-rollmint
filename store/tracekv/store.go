@@ -4,12 +4,11 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"io"
 
 	"github.com/chrispappas/golang-generics-set/set"
 	"github.com/cosmos/cosmos-sdk/store/types"
-	"github.com/cosmos/cosmos-sdk/types/errors"
 )
 
 const (
@@ -21,7 +20,7 @@ const (
 )
 
 var (
-	ErrBufferEmpty = fmt.Errorf("provided buffer is empty")
+	ErrBufferEmpty = errors.New("provided buffer is empty")
 )
 
 type (

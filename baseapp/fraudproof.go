@@ -3,6 +3,7 @@ package baseapp
 import (
 	"bytes"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 
 	smtlib "github.com/celestiaorg/smt"
@@ -11,6 +12,10 @@ import (
 	iavltree "github.com/cosmos/iavl"
 	abci "github.com/tendermint/tendermint/abci/types"
 	tmcrypto "github.com/tendermint/tendermint/proto/tendermint/crypto"
+)
+
+var (
+	ErrMoreThanOneBlockTypeUsed = errors.New("fraudProof has more than one type of fradulent state transitions marked nil")
 )
 
 // Represents a single-round fraudProof
@@ -92,7 +97,7 @@ func (fraudProof *FraudProof) checkFraudulentStateTransition() bool {
 
 func (fraudProof *FraudProof) verifyFraudProof() (bool, error) {
 	if !fraudProof.checkFraudulentStateTransition() {
-		return false, fmt.Errorf("fraudProof has more than one type of fradulent state transitions marked nil")
+		return false, ErrMoreThanOneBlockTypeUsed
 	}
 	for storeKey, stateWitness := range fraudProof.stateWitness {
 		proofOp := stateWitness.Proof
