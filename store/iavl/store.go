@@ -430,6 +430,23 @@ func getProofFromTree(tree *iavl.MutableTree, key []byte, exists bool) *tmcrypto
 	return &tmcrypto.ProofOps{Ops: []tmcrypto.ProofOp{op.ProofOp()}}
 }
 
+// Takes a MutableTree, and a key and returns a DST Non-Existence Proof for the key
+func (st *Store) GetDSTNonExistenceProofFromDeepSubTree(key []byte) *iavl.DSTNonExistenceProof {
+	// value wasn't found
+	iavlTree := st.tree.((*iavl.MutableTree))
+	commitmentProof, err := iavlTree.GetNonMembershipProof(key)
+	if err != nil {
+		// sanity check: If value wasn't found, nonmembership proof must be creatable
+		panic(fmt.Sprintf("unexpected error for nonexistence proof: %s", err.Error()))
+	}
+
+	dstNonExistenceProof, err := iavl.ConvertToDSTNonExistenceProof(iavlTree.ImmutableTree, commitmentProof.GetNonexist())
+	if err != nil {
+		panic(fmt.Sprintf("unexpected error while creating dst non-existence proof: %s", err.Error()))
+	}
+	return dstNonExistenceProof
+}
+
 //----------------------------------------
 
 // iavlIterator implements types.Iterator.
