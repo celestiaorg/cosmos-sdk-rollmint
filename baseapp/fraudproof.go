@@ -2,16 +2,16 @@ package baseapp
 
 import (
 	"bytes"
-	"crypto/sha256"
 	"errors"
 	"fmt"
 
 	smtlib "github.com/celestiaorg/smt"
 	"github.com/cosmos/cosmos-sdk/store/types"
-	"github.com/cosmos/cosmos-sdk/store/v2alpha1/smt"
+	"github.com/cosmos/iavl"
 	iavltree "github.com/cosmos/iavl"
 	abci "github.com/tendermint/tendermint/abci/types"
 	tmcrypto "github.com/tendermint/tendermint/proto/tendermint/crypto"
+	db "github.com/tendermint/tm-db"
 )
 
 var (
@@ -47,8 +47,9 @@ type StateWitness struct {
 	WitnessData []WitnessData
 }
 
-// Witness data containing a key/value pair and a SMT proof for said key/value pair
+// Witness data containing a key/value pair and a IAVL proof for said key/value pair
 type WitnessData struct {
+	// TODO: Key and Value can be removed since they're contained in Proof
 	Key   []byte
 	Value []byte
 	Proof tmcrypto.ProofOp
@@ -65,21 +66,24 @@ func (fraudProof *FraudProof) getModules() []string {
 func (fraudProof *FraudProof) getDeepIAVLTrees() (map[string]*iavltree.MutableTree, error) {
 	storeKeyToIAVLTree := make(map[string]*iavltree.MutableTree)
 	for storeKey, stateWitness := range fraudProof.stateWitness {
-		rootHash := stateWitness.RootHash
-		// TODO(manav): Replace with IAVL Deep Subtrees once implementation is done
-		substoreDeepSMT := smtlib.NewDeepSparseMerkleSubTree(smtlib.NewSimpleMap(), smtlib.NewSimpleMap(), sha256.New(), rootHash)
+		mutableTree, err := iavl.NewMutableTree(db.NewMemDB(), 100)
+		if err != nil {
+			return nil, err
+		}
+		dst := iavl.DeepSubTree{MutableTree: mutableTree}
 		for _, witnessData := range stateWitness.WitnessData {
-			proofOp, key, val := witnessData.Proof, witnessData.Key, witnessData.Value
+			proofOp, _, _ := witnessData.Proof, witnessData.Key, witnessData.Value
 			proof, err := types.CommitmentOpDecoder(proofOp)
 			if err != nil {
 				return nil, err
 			}
-			// TODO(manav): Replace with an IAVL proof instead of SMT here
-			smtProof := proof.(*smt.ProofOp).GetProof()
-			substoreDeepSMT.AddBranch(smtProof, key, val)
+			iavlProof := proof.(*types.CommitmentOp).Proof
+			err = dst.AddExistenceProof(iavlProof.GetExist())
+			if err != nil {
+				return nil, err
+			}
 		}
-		// TODO(manav): Replace with actual iavl stores
-		storeKeyToIAVLTree[storeKey] = &iavltree.MutableTree{}
+		storeKeyToIAVLTree[storeKey] = dst.MutableTree
 	}
 	return storeKeyToIAVLTree, nil
 }
