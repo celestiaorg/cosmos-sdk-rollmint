@@ -889,6 +889,17 @@ func (app *BaseApp) getFraudProof() (FraudProof, error) {
 					proof := iavlStore.GetProofFromTree(bKey)
 					witnessData := WitnessData{bKey, bVal, proof.GetOps()[0]}
 					stateWitness.WitnessData = append(stateWitness.WitnessData, witnessData)
+				} else {
+					dstProof := iavlStore.GetDSTNonExistenceProofFromDeepSubTree(bKey)
+					witnesses := iavlStore.DSTNonExistenceProofToWitnesses(dstProof)
+					for _, witness := range witnesses {
+						if witness != nil {
+							bKey := witness.Key
+							bVal := iavlStore.Get(bKey)
+							witnessData := WitnessData{bKey, bVal, *witness}
+							stateWitness.WitnessData = append(stateWitness.WitnessData, witnessData)
+						}
+					}
 				}
 			}
 			fraudProof.stateWitness[storeKey.Name()] = stateWitness

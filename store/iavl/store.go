@@ -447,6 +447,28 @@ func (st *Store) GetDSTNonExistenceProofFromDeepSubTree(key []byte) *iavl.DSTNon
 	return dstNonExistenceProof
 }
 
+func (st *Store) DSTNonExistenceProofToWitnesses(dstNonExistenceProof *iavl.DSTNonExistenceProof) []*tmcrypto.ProofOp {
+	return []*tmcrypto.ProofOp{
+		getProofOp(dstNonExistenceProof.Left),
+		getProofOp(dstNonExistenceProof.Right),
+		getProofOp(dstNonExistenceProof.LeftSiblingProof),
+		getProofOp(dstNonExistenceProof.RightSiblingProof),
+	}
+}
+
+func getProofOp(exist *ics23.ExistenceProof) *tmcrypto.ProofOp {
+	if exist == nil {
+		return nil
+	}
+	commitmentProof := &ics23.CommitmentProof{
+		Proof: &ics23.CommitmentProof_Exist{
+			Exist: exist,
+		},
+	}
+	proofOp := types.NewIavlCommitmentOp(exist.Key, commitmentProof).ProofOp()
+	return &proofOp
+}
+
 //----------------------------------------
 
 // iavlIterator implements types.Iterator.
