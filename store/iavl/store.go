@@ -443,7 +443,7 @@ func (st *Store) GetDSTNonExistenceProofFromDeepSubTree(key []byte) *iavl.DSTNon
 		panic(fmt.Sprintf("unexpected error for nonexistence proof: %s", err.Error()))
 	}
 
-	dstNonExistenceProof, err := iavl.ConvertToDSTNonExistenceProof(iavlTree.ImmutableTree, commitmentProof.GetNonexist())
+	dstNonExistenceProof, err := iavl.ConvertToDSTNonExistenceProof(iavlTree, commitmentProof.GetNonexist())
 	if err != nil {
 		panic(fmt.Sprintf("unexpected error while creating dst non-existence proof: %s", err.Error()))
 	}

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 
-	smtlib "github.com/celestiaorg/smt"
 	"github.com/cosmos/cosmos-sdk/store/types"
 	"github.com/cosmos/iavl"
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -65,7 +64,7 @@ func (fraudProof *FraudProof) getModules() []string {
 func (fraudProof *FraudProof) getDeepIAVLTrees() (map[string]*iavl.DeepSubTree, error) {
 	storeKeyToIAVLTree := make(map[string]*iavl.DeepSubTree)
 	for storeKey, stateWitness := range fraudProof.stateWitness {
-		dst, err := iavl.NewDeepSubTree(db.NewMemDB(), 100, fraudProof.blockHeight)
+		dst, err := iavl.NewDeepSubTree(db.NewMemDB(), 100, false, fraudProof.blockHeight)
 		if err != nil {
 			return nil, err
 		}
