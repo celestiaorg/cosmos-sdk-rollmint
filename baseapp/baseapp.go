@@ -885,9 +885,8 @@ func (app *BaseApp) getFraudProof() (FraudProof, error) {
 				bKey := []byte(key)
 				has := iavlStore.Has(bKey)
 				if has {
-					value := iavlStore.Get(bKey)
+					bVal := iavlStore.Get(bKey)
 					proof := iavlStore.GetProofFromTree(bKey)
-					bVal := []byte(value)
 					witnessData := WitnessData{bKey, bVal, proof.GetOps()[0]}
 					stateWitness.WitnessData = append(stateWitness.WitnessData, witnessData)
 				}

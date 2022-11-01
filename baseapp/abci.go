@@ -152,7 +152,7 @@ func (app *BaseApp) GetAppHash(req abci.RequestGetAppHash) (res abci.ResponseGet
 func (app *BaseApp) executeNonFraudulentTransactions(req abci.RequestGenerateFraudProof, isDeliverTxFraudulent bool) {
 	numNonFraudulentRequests := len(req.DeliverTxRequests)
 	if isDeliverTxFraudulent {
-		numNonFraudulentRequests = numNonFraudulentRequests - 1
+		numNonFraudulentRequests--
 	}
 	nonFraudulentRequests := req.DeliverTxRequests[:numNonFraudulentRequests]
 	for _, deliverTxRequest := range nonFraudulentRequests {
@@ -204,7 +204,7 @@ func (app *BaseApp) GenerateFraudProof(req abci.RequestGenerateFraudProof) (res 
 		panic(err)
 	}
 
-	// Fast-forward to right before fradulent state transition occured
+	// Fast-forward to right before fradulent state transition occurred
 	app.BeginBlock(beginBlockRequest)
 	if !isBeginBlockFraudulent {
 		app.executeNonFraudulentTransactions(req, isDeliverTxFraudulent)
@@ -216,11 +216,12 @@ func (app *BaseApp) GenerateFraudProof(req abci.RequestGenerateFraudProof) (res 
 		panic(err)
 	}
 
-	if isBeginBlockFraudulent {
+	switch {
+	case isBeginBlockFraudulent:
 		fraudProof.fraudulentBeginBlock = &beginBlockRequest
-	} else if isDeliverTxFraudulent {
+	case isDeliverTxFraudulent:
 		fraudProof.fraudulentDeliverTx = req.DeliverTxRequests[len(req.DeliverTxRequests)-1]
-	} else {
+	default:
 		fraudProof.fraudulentEndBlock = req.EndBlockRequest
 	}
 	abciFraudProof := fraudProof.toABCI()
