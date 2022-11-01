@@ -41,7 +41,7 @@ type Store struct {
 }
 
 // LoadStoreWithDeepIAVLTree returns an IAVL Store as a CommitKVStore with given deep tree.
-func LoadStoreWithDeepIAVLTree(tree *iavl.MutableTree) (types.CommitKVStore, error) {
+func LoadStoreWithDeepIAVLTree(tree Tree) (types.CommitKVStore, error) {
 	return &Store{
 		tree: tree,
 	}, nil
@@ -300,7 +300,10 @@ func (st *Store) GetProofFromTree(key []byte) *tmcrypto.ProofOps {
 }
 
 func (st *Store) Root() ([]byte, error) {
-	iavlTree := st.tree.((*iavl.MutableTree))
+	iavlTree, ok := st.tree.(*iavl.MutableTree)
+	if !ok {
+		iavlTree = st.tree.(*iavl.DeepSubTree).MutableTree
+	}
 	hash, err := iavlTree.WorkingHash()
 	return hash, err
 }

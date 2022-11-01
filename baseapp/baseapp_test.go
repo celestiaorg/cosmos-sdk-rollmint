@@ -88,7 +88,7 @@ func setupBaseApp(t *testing.T, options ...func(*BaseApp)) *BaseApp {
 	app := newBaseApp(t.Name(), options...)
 	require.Equal(t, t.Name(), app.Name())
 
-	app.MountStores(capKey1, capKey2)
+	app.MountStores(capKey2)
 	app.SetParamStore(&paramStore{db: dbm.NewMemDB()})
 
 	// stores are mounted
@@ -2353,9 +2353,10 @@ func TestGenerateAndLoadFraudProof(t *testing.T) {
 	appHashB1, err := appB1.cms.(*rootmulti.Store).GetAppHash()
 	require.Nil(t, err)
 
-	//TODO: Write iavl equivalent somehow
-	// storeHashB1 := appB1.cms.(*multi.Store).GetSubstoreSMT(capKey2.Name()).Root()
-
+	storeB1, err := appB1.cms.(*rootmulti.Store).GetIAVLStore(capKey2.Name())
+	require.Nil(t, err)
+	storeHashB1, err := storeB1.Root()
+	require.Nil(t, err)
 	resp := appB1.GenerateFraudProof(
 		abci.RequestGenerateFraudProof{
 			BeginBlockRequest: *beginRequest, DeliverTxRequests: append(nonFraudulentDeliverRequests, fraudDeliverRequest), EndBlockRequest: nil,
@@ -2372,12 +2373,92 @@ func TestGenerateAndLoadFraudProof(t *testing.T) {
 
 	// Now we take contents of the fraud proof which was recorded with S2 and try to populate a fresh baseapp B2 with it
 	// B2 <- S2
-	// codec := codec.NewLegacyAmino()
-	// registerTestCodec(codec)
-	// appB2, err := SetupBaseAppFromFraudProof(t.Name(), defaultLogger(), dbm.NewMemDB(), testTxDecoder(codec), fraudProof, routerOpt)
-	// require.Nil(t, err)
-	// appB2Hash := appB2.cms.(*rootmulti.Store).GetAppHash()
-	// require.Equal(t, appHashB1, appB2Hash)
-	// storeHashB2 := appB2.cms.(*multi.Store).GetSubstoreSMT(capKey2.Name()).Root()
-	// require.Equal(t, storeHashB1, storeHashB2)
+	codec := codec.NewLegacyAmino()
+	registerTestCodec(codec)
+	appB2, err := SetupBaseAppFromFraudProof(t.Name(), defaultLogger(), dbm.NewMemDB(), testTxDecoder(codec), fraudProof, routerOpt)
+	require.Nil(t, err)
+	appB2Hash, err := appB2.cms.(*rootmulti.Store).GetAppHash()
+	require.Nil(t, err)
+	require.Equal(t, appHashB1, appB2Hash)
+	storeB2, err := appB2.cms.(*rootmulti.Store).GetIAVLStore(capKey2.Name())
+	require.Nil(t, err)
+	storeHashB2, err := storeB2.Root()
+	require.Nil(t, err)
+	require.Equal(t, storeHashB1, storeHashB2)
+}
+
+func TestABCIEndToEndFraudProof(t *testing.T) {
+	storeTraceBuf := &bytes.Buffer{}
+	subStoreTraceBuf := &bytes.Buffer{}
+
+	routerOpt := func(bapp *BaseApp) {
+		bapp.Router().AddRoute(sdk.NewRoute(routeMsgKeyValue, func(ctx sdk.Context, msg sdk.Msg) (*sdk.Result, error) {
+			kv := msg.(*msgKeyValue)
+			bapp.cms.GetKVStore(capKey2).Set(kv.Key, kv.Value)
+			return &sdk.Result{}, nil
+		}))
+	}
+
+	// BaseApp, B1 with no Tracing
+	appB1 := setupBaseApp(t,
+		routerOpt,
+	)
+	appB1.SetCommitMultiStoreTracer(storeTraceBuf)
+	appB1.SetCommitKVStoreTracer(capKey2.Name(), subStoreTraceBuf)
+
+	// B1 <- S0
+	appB1.InitChain(abci.RequestInitChain{})
+
+	numTransactions := 2
+	// B1 <- S1
+	executeBlockWithArbitraryTxs(t, appB1, numTransactions, 1)
+	appB1.Commit()
+
+	// B1 <- S2
+	beginRequest, txs, deliverRequests, _ := getBlockWithArbitraryTxs(t, appB1, numTransactions, 2)
+
+	// Modify deliverRequests to discard last tx in the block
+	nonFraudulentDeliverRequests := deliverRequests[0 : len(deliverRequests)-1]
+	txs = txs[0 : len(txs)-1]
+	require.NotEmpty(t, txs)
+	fraudDeliverRequest := getFraudTx(t, txs[0])
+
+	executeBlockWithRequests(t, appB1, beginRequest, nonFraudulentDeliverRequests, nil, 0)
+	executeBlockWithRequests(t, appB1, nil, []*abci.RequestDeliverTx{fraudDeliverRequest}, nil, 0)
+
+	// Save appHash for comparision later
+	appHashAfterFraud, err := appB1.cms.(*rootmulti.Store).GetAppHash()
+	require.Nil(t, err)
+
+	generateResp := appB1.GenerateFraudProof(
+		abci.RequestGenerateFraudProof{
+			BeginBlockRequest: *beginRequest, DeliverTxRequests: append(nonFraudulentDeliverRequests, fraudDeliverRequest), EndBlockRequest: nil,
+		},
+	)
+	routerOpts := make(map[string]func(*BaseApp))
+	newRouterOpt := func(bapp *BaseApp) {
+		bapp.Router().AddRoute(sdk.NewRoute(routeMsgKeyValue, func(ctx sdk.Context, msg sdk.Msg) (*sdk.Result, error) {
+			kv := msg.(*msgKeyValue)
+			cms := bapp.cms.(*rootmulti.Store)
+			sKeys := cms.GetStoreKeys()
+			largestKey := sKeys[0]
+			for _, sKey := range sKeys[1:] {
+				if sKey.Name() > largestKey.Name() {
+					largestKey = sKey
+				}
+			}
+			bapp.cms.GetKVStore(largestKey).Set(kv.Key, kv.Value)
+			return &sdk.Result{}, nil
+		}))
+	}
+	routerOpts[capKey2.Name()] = newRouterOpt
+	appB1.routerOpts = routerOpts
+	// Light Client
+	verifyResp := appB1.VerifyFraudProof(
+		abci.RequestVerifyFraudProof{
+			FraudProof:      generateResp.FraudProof,
+			ExpectedAppHash: appHashAfterFraud,
+		},
+	)
+	require.True(t, verifyResp.Success)
 }

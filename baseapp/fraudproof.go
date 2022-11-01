@@ -8,7 +8,6 @@ import (
 	smtlib "github.com/celestiaorg/smt"
 	"github.com/cosmos/cosmos-sdk/store/types"
 	"github.com/cosmos/iavl"
-	iavltree "github.com/cosmos/iavl"
 	abci "github.com/tendermint/tendermint/abci/types"
 	tmcrypto "github.com/tendermint/tendermint/proto/tendermint/crypto"
 	db "github.com/tendermint/tm-db"
@@ -63,27 +62,30 @@ func (fraudProof *FraudProof) getModules() []string {
 	return keys
 }
 
-func (fraudProof *FraudProof) getDeepIAVLTrees() (map[string]*iavltree.MutableTree, error) {
-	storeKeyToIAVLTree := make(map[string]*iavltree.MutableTree)
+func (fraudProof *FraudProof) getDeepIAVLTrees() (map[string]*iavl.DeepSubTree, error) {
+	storeKeyToIAVLTree := make(map[string]*iavl.DeepSubTree)
 	for storeKey, stateWitness := range fraudProof.stateWitness {
-		mutableTree, err := iavl.NewMutableTree(db.NewMemDB(), 100)
+		dst, err := iavl.NewDeepSubTree(db.NewMemDB(), 100, fraudProof.blockHeight)
 		if err != nil {
 			return nil, err
 		}
-		dst := iavl.DeepSubTree{MutableTree: mutableTree}
 		for _, witnessData := range stateWitness.WitnessData {
 			proofOp, _, _ := witnessData.Proof, witnessData.Key, witnessData.Value
 			proof, err := types.CommitmentOpDecoder(proofOp)
 			if err != nil {
 				return nil, err
 			}
-			iavlProof := proof.(*types.CommitmentOp).Proof
+			iavlProof := proof.(types.CommitmentOp).Proof
 			err = dst.AddExistenceProof(iavlProof.GetExist())
 			if err != nil {
 				return nil, err
 			}
 		}
-		storeKeyToIAVLTree[storeKey] = dst.MutableTree
+		err = dst.BuildTree(stateWitness.RootHash)
+		if err != nil {
+			return nil, err
+		}
+		storeKeyToIAVLTree[storeKey] = dst
 	}
 	return storeKeyToIAVLTree, nil
 }

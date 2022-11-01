@@ -248,7 +248,12 @@ func (app *BaseApp) VerifyFraudProof(req abci.RequestVerifyFraudProof) (res abci
 
 	if success {
 		// Third level of verification
-
+		options := make([]func(*BaseApp), 0)
+		if app.routerOpts != nil {
+			for _, routerOpt := range app.routerOpts {
+				options = append(options, routerOpt)
+			}
+		}
 		// Setup a new app from fraud proof
 		appFromFraudProof, err := SetupBaseAppFromFraudProof(
 			app.Name()+"FromFraudProof",
@@ -256,6 +261,7 @@ func (app *BaseApp) VerifyFraudProof(req abci.RequestVerifyFraudProof) (res abci
 			db.NewMemDB(),
 			app.txDecoder,
 			fraudProof,
+			options...,
 		)
 		if err != nil {
 			panic(err)
@@ -277,7 +283,10 @@ func (app *BaseApp) VerifyFraudProof(req abci.RequestVerifyFraudProof) (res abci
 
 			appFromFraudProof.BeginBlock(abci.RequestBeginBlock{Header: tmproto.Header{Height: fraudProof.blockHeight}})
 			if fraudProof.fraudulentDeliverTx != nil {
-				appFromFraudProof.DeliverTx(*fraudProof.fraudulentDeliverTx)
+				resp := appFromFraudProof.DeliverTx(*fraudProof.fraudulentDeliverTx)
+				if !resp.IsOK() {
+					panic(resp.Log)
+				}
 			} else {
 				appFromFraudProof.EndBlock(*fraudProof.fraudulentEndBlock)
 			}

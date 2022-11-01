@@ -113,6 +113,8 @@ type BaseApp struct { // nolint: maligned
 	// abciListeners for hooking into the ABCI message processing of the BaseApp
 	// and exposing the requests and responses to external consumers
 	abciListeners []ABCIListener
+
+	routerOpts map[string]func(*BaseApp)
 }
 
 type appStore struct {
@@ -910,12 +912,10 @@ func (app *BaseApp) getFraudProof() (FraudProof, error) {
 }
 
 // set up a new baseapp from given params
-func SetupBaseAppFromParams(appName string, logger log.Logger, db dbm.DB, txDecoder sdk.TxDecoder, storeKeyNames []string, storeKeyToIAVLTree map[string]*iavl.MutableTree, blockHeight int64, options ...func(*BaseApp)) (*BaseApp, error) {
+func SetupBaseAppFromParams(appName string, logger log.Logger, db dbm.DB, txDecoder sdk.TxDecoder, storeKeyNames []string, storeKeyToIAVLTree map[string]*iavl.DeepSubTree, blockHeight int64, options ...func(*BaseApp)) (*BaseApp, error) {
 	storeKeys := make([]storetypes.StoreKey, 0, len(storeKeyNames))
 	for _, storeKeyName := range storeKeyNames {
 		storeKeys = append(storeKeys, sdk.NewKVStoreKey(storeKeyName))
-		iavlTree := storeKeyToIAVLTree[storeKeyName]
-		options = append(options, SetDeepIAVLTree(storeKeyName, iavlTree))
 	}
 	// This initial height is used in `BeginBlock` in `validateHeight`
 	options = append(options, SetInitialHeight(blockHeight))
@@ -924,7 +924,10 @@ func SetupBaseAppFromParams(appName string, logger log.Logger, db dbm.DB, txDeco
 
 	// stores are mounted
 	app.MountStores(storeKeys...)
-
+	cmsStore := app.cms.(*rootmulti.Store)
+	for storeKey, iavlTree := range storeKeyToIAVLTree {
+		cmsStore.SetDeepIAVLTree(storeKey, iavlTree)
+	}
 	err := app.LoadLatestVersion()
 	return app, err
 }

@@ -361,7 +361,7 @@ func (rs *Store) SetInterBlockCache(c types.MultiStorePersistentCache) {
 	rs.interBlockCache = c
 }
 
-func (rs *Store) SetDeepIAVLTree(skey string, iavlTree *iavltree.MutableTree) {
+func (rs *Store) SetDeepIAVLTree(skey string, iavlTree iavl.Tree) {
 	key := rs.keysByName[skey]
 	storeParams := rs.storesParams[key]
 	storeParams.deepIAVLTree = iavlTree
@@ -1091,7 +1091,7 @@ type storeParams struct {
 	typ            types.StoreType
 	initialVersion uint64
 
-	deepIAVLTree *iavltree.MutableTree
+	deepIAVLTree iavl.Tree
 
 	traceWriter io.Writer
 }
