@@ -88,7 +88,7 @@ func setupBaseApp(t *testing.T, options ...func(*BaseApp)) *BaseApp {
 	app := newBaseApp(t.Name(), options...)
 	require.Equal(t, t.Name(), app.Name())
 
-	app.MountStores(capKey2)
+	app.MountStores(capKey1, capKey2)
 	app.SetParamStore(&paramStore{db: dbm.NewMemDB()})
 
 	// stores are mounted
@@ -2313,7 +2313,8 @@ func TestGenerateAndLoadFraudProof(t *testing.T) {
 	*/
 
 	storeTraceBuf := &bytes.Buffer{}
-	subStoreTraceBuf := &bytes.Buffer{}
+	subStoreTraceBuf1 := &bytes.Buffer{}
+	subStoreTraceBuf2 := &bytes.Buffer{}
 
 	routerOpt := func(bapp *BaseApp) {
 		bapp.Router().AddRoute(sdk.NewRoute(routeMsgKeyValue, func(ctx sdk.Context, msg sdk.Msg) (*sdk.Result, error) {
@@ -2328,7 +2329,8 @@ func TestGenerateAndLoadFraudProof(t *testing.T) {
 		routerOpt,
 	)
 	appB1.SetCommitMultiStoreTracer(storeTraceBuf)
-	appB1.SetCommitKVStoreTracer(capKey2.Name(), subStoreTraceBuf)
+	appB1.SetCommitKVStoreTracer(capKey1.Name(), subStoreTraceBuf1)
+	appB1.SetCommitKVStoreTracer(capKey2.Name(), subStoreTraceBuf2)
 
 	// B1 <- S0
 	appB1.InitChain(abci.RequestInitChain{})
@@ -2389,7 +2391,8 @@ func TestGenerateAndLoadFraudProof(t *testing.T) {
 
 func TestABCIEndToEndFraudProof(t *testing.T) {
 	storeTraceBuf := &bytes.Buffer{}
-	subStoreTraceBuf := &bytes.Buffer{}
+	subStoreTraceBuf1 := &bytes.Buffer{}
+	subStoreTraceBuf2 := &bytes.Buffer{}
 
 	routerOpt := func(bapp *BaseApp) {
 		bapp.Router().AddRoute(sdk.NewRoute(routeMsgKeyValue, func(ctx sdk.Context, msg sdk.Msg) (*sdk.Result, error) {
@@ -2404,7 +2407,8 @@ func TestABCIEndToEndFraudProof(t *testing.T) {
 		routerOpt,
 	)
 	appB1.SetCommitMultiStoreTracer(storeTraceBuf)
-	appB1.SetCommitKVStoreTracer(capKey2.Name(), subStoreTraceBuf)
+	appB1.SetCommitKVStoreTracer(capKey1.Name(), subStoreTraceBuf1)
+	appB1.SetCommitKVStoreTracer(capKey2.Name(), subStoreTraceBuf2)
 
 	// B1 <- S0
 	appB1.InitChain(abci.RequestInitChain{})
