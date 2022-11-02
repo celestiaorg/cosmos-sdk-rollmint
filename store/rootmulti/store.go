@@ -203,7 +203,7 @@ func (rs *Store) LoadLastVersion() error {
 		// there is no last version.
 		return fmt.Errorf("no previous commit found")
 	}
-
+	rs.ResetAllTraceWriters()
 	lastVersion := rs.lastCommitInfo.GetVersion()
 	return rs.loadVersion(lastVersion, nil)
 }

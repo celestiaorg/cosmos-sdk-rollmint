@@ -1,6 +1,7 @@
 package baseapp
 
 import (
+	"bytes"
 	"fmt"
 	"strings"
 
@@ -848,7 +849,7 @@ func makeABCIData(msgResponses []*codectypes.Any) ([]byte, error) {
 }
 
 // Generate a fraudproof for an app with the given trace buffers
-func (app *BaseApp) getFraudProof() (FraudProof, error) {
+func (app *BaseApp) getFraudProof(storeKeyToTraceBuf map[string]*bytes.Buffer) (FraudProof, error) {
 	fraudProof := FraudProof{}
 	fraudProof.stateWitness = make(map[string]StateWitness)
 	fraudProof.blockHeight = app.LastBlockHeight()
@@ -859,53 +860,52 @@ func (app *BaseApp) getFraudProof() (FraudProof, error) {
 		return FraudProof{}, err
 	}
 	fraudProof.appHash = appHash
-	storeKeys := cms.GetStoreKeys()
-	for _, storeKey := range storeKeys {
-		if subStoreTraceBuf := cms.GetTracerBufferFor(storeKey.Name()); subStoreTraceBuf != nil {
-			keys := cms.GetKVStore(storeKey).(*tracekv.Store).GetAllKeysUsedInTrace(*subStoreTraceBuf)
-			iavlStore, err := cms.GetIAVLStore(storeKey.Name())
-			if err != nil {
-				return FraudProof{}, err
-			}
-			rootHash, err := iavlStore.Root()
-			if err != nil {
-				return FraudProof{}, err
-			}
-			if rootHash == nil {
-				continue
-			}
-			proof, err := cms.GetStoreProof(storeKey.Name())
-			if err != nil {
-				return FraudProof{}, err
-			}
-			stateWitness := StateWitness{
-				Proof:       *proof,
-				RootHash:    rootHash,
-				WitnessData: make([]WitnessData, 0),
-			}
-			for key := range keys {
-				bKey := []byte(key)
-				has := iavlStore.Has(bKey)
-				if has {
-					bVal := iavlStore.Get(bKey)
-					proof := iavlStore.GetProofFromTree(bKey)
-					witnessData := WitnessData{bKey, bVal, proof.GetOps()[0]}
-					stateWitness.WitnessData = append(stateWitness.WitnessData, witnessData)
-				} else {
-					dstProof := iavlStore.GetDSTNonExistenceProofFromDeepSubTree(bKey)
-					witnesses := iavlStore.DSTNonExistenceProofToWitnesses(dstProof)
-					for _, witness := range witnesses {
-						if witness != nil {
-							bKey := witness.Key
-							bVal := iavlStore.Get(bKey)
-							witnessData := WitnessData{bKey, bVal, *witness}
-							stateWitness.WitnessData = append(stateWitness.WitnessData, witnessData)
-						}
+	nameToStoreKey := cms.StoreKeysByName()
+	for storeKeyName, traceBuf := range storeKeyToTraceBuf {
+		storeKey := nameToStoreKey[storeKeyName]
+		keys := cms.GetKVStore(storeKey).(*tracekv.Store).GetAllKeysUsedInTrace(*traceBuf)
+		iavlStore, err := cms.GetIAVLStore(storeKeyName)
+		if err != nil {
+			return FraudProof{}, err
+		}
+		rootHash, err := iavlStore.Root()
+		if err != nil {
+			return FraudProof{}, err
+		}
+		if rootHash == nil {
+			continue
+		}
+		proof, err := cms.GetStoreProof(storeKeyName)
+		if err != nil {
+			return FraudProof{}, err
+		}
+		stateWitness := StateWitness{
+			Proof:       *proof,
+			RootHash:    rootHash,
+			WitnessData: make([]WitnessData, 0),
+		}
+		for key := range keys {
+			bKey := []byte(key)
+			has := iavlStore.Has(bKey)
+			if has {
+				bVal := iavlStore.Get(bKey)
+				proof := iavlStore.GetProofFromTree(bKey)
+				witnessData := WitnessData{bKey, bVal, proof.GetOps()[0]}
+				stateWitness.WitnessData = append(stateWitness.WitnessData, witnessData)
+			} else {
+				dstProof := iavlStore.GetDSTNonExistenceProofFromDeepSubTree(bKey)
+				witnesses := iavlStore.DSTNonExistenceProofToWitnesses(dstProof)
+				for _, witness := range witnesses {
+					if witness != nil {
+						bKey := witness.Key
+						bVal := iavlStore.Get(bKey)
+						witnessData := WitnessData{bKey, bVal, *witness}
+						stateWitness.WitnessData = append(stateWitness.WitnessData, witnessData)
 					}
 				}
 			}
-			fraudProof.stateWitness[storeKey.Name()] = stateWitness
 		}
+		fraudProof.stateWitness[storeKeyName] = stateWitness
 	}
 
 	return fraudProof, nil
