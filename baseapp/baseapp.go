@@ -912,7 +912,7 @@ func (app *BaseApp) getFraudProof(storeKeyToTraceBuf map[string]*bytes.Buffer) (
 }
 
 // set up a new baseapp from given params
-func SetupBaseAppFromParams(appName string, logger log.Logger, db dbm.DB, txDecoder sdk.TxDecoder, storeKeyNames []string, storeKeyToIAVLTree map[string]*iavl.DeepSubTree, blockHeight int64, options ...func(*BaseApp)) (*BaseApp, error) {
+func setupBaseAppFromParams(appName string, logger log.Logger, db dbm.DB, txDecoder sdk.TxDecoder, storeKeyNames []string, storeKeyToIAVLTree map[string]*iavl.DeepSubTree, blockHeight int64, options ...func(*BaseApp)) (*BaseApp, error) {
 	storeKeys := make([]storetypes.StoreKey, 0, len(storeKeyNames))
 	for _, storeKeyName := range storeKeyNames {
 		storeKeys = append(storeKeys, sdk.NewKVStoreKey(storeKeyName))
@@ -938,5 +938,5 @@ func SetupBaseAppFromFraudProof(appName string, logger log.Logger, db dbm.DB, tx
 	if err != nil {
 		return nil, err
 	}
-	return SetupBaseAppFromParams(appName, logger, db, txDecoder, fraudProof.getModules(), storeKeyToIAVLTree, fraudProof.blockHeight, options...)
+	return setupBaseAppFromParams(appName, logger, db, txDecoder, fraudProof.getModules(), storeKeyToIAVLTree, fraudProof.blockHeight, options...)
 }
