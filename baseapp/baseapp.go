@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/cosmos/iavl"
+	iavltree "github.com/cosmos/iavl"
 	"github.com/gogo/protobuf/proto"
+
 	abci "github.com/tendermint/tendermint/abci/types"
 	"github.com/tendermint/tendermint/crypto/tmhash"
 	"github.com/tendermint/tendermint/libs/log"
@@ -16,6 +17,7 @@ import (
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/snapshots"
 	"github.com/cosmos/cosmos-sdk/store"
+	iavl "github.com/cosmos/cosmos-sdk/store/iavl"
 	"github.com/cosmos/cosmos-sdk/store/rootmulti"
 	"github.com/cosmos/cosmos-sdk/store/tracekv"
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
@@ -884,35 +886,40 @@ func (app *BaseApp) getFraudProof(storeKeyToTraceBuf map[string]*bytes.Buffer) (
 			RootHash:    rootHash,
 			WitnessData: make([]WitnessData, 0),
 		}
-		for key := range keys {
-			bKey := []byte(key)
-			has := iavlStore.Has(bKey)
-			if has {
-				bVal := iavlStore.Get(bKey)
-				proof := iavlStore.GetProofFromTree(bKey)
-				witnessData := WitnessData{bKey, bVal, proof.GetOps()[0]}
-				stateWitness.WitnessData = append(stateWitness.WitnessData, witnessData)
-			} else {
-				dstProof := iavlStore.GetDSTNonExistenceProofFromDeepSubTree(bKey)
-				witnesses := iavlStore.DSTNonExistenceProofToWitnesses(dstProof)
-				for _, witness := range witnesses {
-					if witness != nil {
-						bKey := witness.Key
-						bVal := iavlStore.Get(bKey)
-						witnessData := WitnessData{bKey, bVal, *witness}
-						stateWitness.WitnessData = append(stateWitness.WitnessData, witnessData)
-					}
-				}
-			}
-		}
+		populateStateWitness(&stateWitness, iavlStore, keys.Values())
 		fraudProof.stateWitness[storeKeyName] = stateWitness
 	}
 
 	return fraudProof, nil
 }
 
+// populates the given state witness using traced keys and underlying iavl store
+func populateStateWitness(stateWitness *StateWitness, iavlStore *iavl.Store, tracedKeys []string) {
+	for _, key := range tracedKeys {
+		bKey := []byte(key)
+		has := iavlStore.Has(bKey)
+		if has {
+			bVal := iavlStore.Get(bKey)
+			proof := iavlStore.GetProofFromTree(bKey)
+			witnessData := WitnessData{bKey, bVal, proof.GetOps()[0]}
+			stateWitness.WitnessData = append(stateWitness.WitnessData, witnessData)
+		} else {
+			dstProof := iavlStore.GetDSTNonExistenceProofFromDeepSubTree(bKey)
+			witnesses := iavlStore.DSTNonExistenceProofToWitnesses(dstProof)
+			for _, witness := range witnesses {
+				if witness != nil {
+					bKey := witness.Key
+					bVal := iavlStore.Get(bKey)
+					witnessData := WitnessData{bKey, bVal, *witness}
+					stateWitness.WitnessData = append(stateWitness.WitnessData, witnessData)
+				}
+			}
+		}
+	}
+}
+
 // set up a new baseapp from given params
-func setupBaseAppFromParams(appName string, logger log.Logger, db dbm.DB, txDecoder sdk.TxDecoder, storeKeyNames []string, storeKeyToIAVLTree map[string]*iavl.DeepSubTree, blockHeight int64, options ...func(*BaseApp)) (*BaseApp, error) {
+func setupBaseAppFromParams(appName string, logger log.Logger, db dbm.DB, txDecoder sdk.TxDecoder, storeKeyNames []string, storeKeyToIAVLTree map[string]*iavltree.DeepSubTree, blockHeight int64, options ...func(*BaseApp)) (*BaseApp, error) {
 	storeKeys := make([]storetypes.StoreKey, 0, len(storeKeyNames))
 	for _, storeKeyName := range storeKeyNames {
 		storeKeys = append(storeKeys, sdk.NewKVStoreKey(storeKeyName))
