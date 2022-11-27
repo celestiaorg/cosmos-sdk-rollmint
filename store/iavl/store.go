@@ -438,23 +438,23 @@ func (st *Store) GetProofsNeeded(operation types.Operation, key []byte, value []
 	// value wasn't found
 	iavlTree := st.tree.((*iavl.MutableTree))
 	if operation == "read" {
-		exisxtenceProofs, err := iavlTree.GetExistenceProofsNeededForGet(key)
+		existenceProofs, err := iavlTree.GetExistenceProofsNeededForGet(key)
 		if err != nil {
 			panic(fmt.Sprintf("unexpected error while getting existence proofs for get: %s", err.Error()))
 		}
-		return convertToProofOps(exisxtenceProofs)
+		return convertToProofOps(existenceProofs)
 	} else if operation == "write" {
-		exisxtenceProofs, err := iavlTree.GetExistenceProofsNeededForSet(key, value)
+		existenceProofs, err := iavlTree.GetExistenceProofsNeededForSet(key, value)
 		if err != nil {
 			panic(fmt.Sprintf("unexpected error while getting existence proofs for set: %s", err.Error()))
 		}
-		return convertToProofOps(exisxtenceProofs)
+		return convertToProofOps(existenceProofs)
 	} else if operation == "delete" {
-		exisxtenceProofs, err := iavlTree.GetExistenceProofsNeededForRemove(key)
+		existenceProofs, err := iavlTree.GetExistenceProofsNeededForRemove(key)
 		if err != nil {
 			panic(fmt.Sprintf("unexpected error while getting existence proofs for remove: %s", err.Error()))
 		}
-		return convertToProofOps(exisxtenceProofs)
+		return convertToProofOps(existenceProofs)
 	} else {
 		panic(fmt.Sprintf("%s: operation not supported", operation))
 	}

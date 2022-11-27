@@ -45,7 +45,7 @@ type StateWitness struct {
 	WitnessData []WitnessData
 }
 
-// Witness data containing a key/value pair and a IAVL proof for said key/value pair
+// Witness data represents a trace operation along with inclusion proofs required for said operation
 type WitnessData struct {
 	Operation types.Operation
 	Key       []byte
