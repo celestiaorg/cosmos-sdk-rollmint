@@ -434,42 +434,52 @@ func getProofFromTree(tree *iavl.MutableTree, key []byte, exists bool) *tmcrypto
 }
 
 // Takes a MutableTree, and a key and returns a DST Non-Existence Proof for the key
-func (st *Store) GetDSTNonExistenceProofFromDeepSubTree(key []byte) *iavl.DSTNonExistenceProof {
+func (st *Store) GetProofsNeeded(operation types.Operation, key []byte, value []byte) []tmcrypto.ProofOp {
 	// value wasn't found
 	iavlTree := st.tree.((*iavl.MutableTree))
-	commitmentProof, err := iavlTree.GetNonMembershipProof(key)
-	if err != nil {
-		// sanity check: If value wasn't found, nonmembership proof must be creatable
-		panic(fmt.Sprintf("unexpected error for nonexistence proof: %s", err.Error()))
+	if operation == "read" {
+		exisxtenceProofs, err := iavlTree.GetExistenceProofsNeededForGet(key)
+		if err != nil {
+			panic(fmt.Sprintf("unexpected error while getting existence proofs for get: %s", err.Error()))
+		}
+		return convertToProofOps(exisxtenceProofs)
+	} else if operation == "write" {
+		exisxtenceProofs, err := iavlTree.GetExistenceProofsNeededForSet(key, value)
+		if err != nil {
+			panic(fmt.Sprintf("unexpected error while getting existence proofs for set: %s", err.Error()))
+		}
+		return convertToProofOps(exisxtenceProofs)
+	} else if operation == "delete" {
+		exisxtenceProofs, err := iavlTree.GetExistenceProofsNeededForRemove(key)
+		if err != nil {
+			panic(fmt.Sprintf("unexpected error while getting existence proofs for remove: %s", err.Error()))
+		}
+		return convertToProofOps(exisxtenceProofs)
+	} else {
+		panic(fmt.Sprintf("%s: operation not supported", operation))
 	}
-
-	dstNonExistenceProof, err := iavl.ConvertToDSTNonExistenceProof(iavlTree, commitmentProof.GetNonexist())
-	if err != nil {
-		panic(fmt.Sprintf("unexpected error while creating dst non-existence proof: %s", err.Error()))
-	}
-	return dstNonExistenceProof
 }
 
-func (st *Store) DSTNonExistenceProofToWitnesses(dstNonExistenceProof *iavl.DSTNonExistenceProof) []*tmcrypto.ProofOp {
-	return []*tmcrypto.ProofOp{
-		getProofOp(dstNonExistenceProof.Left),
-		getProofOp(dstNonExistenceProof.Right),
-		getProofOp(dstNonExistenceProof.LeftSiblingProof),
-		getProofOp(dstNonExistenceProof.RightSiblingProof),
-	}
-}
-
-func getProofOp(exist *ics23.ExistenceProof) *tmcrypto.ProofOp {
-	if exist == nil {
+func convertToProofOps(existenceProofs []*ics23.ExistenceProof) []tmcrypto.ProofOp {
+	if existenceProofs == nil {
 		return nil
 	}
+	proofOps := make([]tmcrypto.ProofOp, 0)
+	for _, existenceProof := range existenceProofs {
+		proofOps = append(proofOps, getProofOp(existenceProof))
+	}
+	return proofOps
+
+}
+
+func getProofOp(exist *ics23.ExistenceProof) tmcrypto.ProofOp {
 	commitmentProof := &ics23.CommitmentProof{
 		Proof: &ics23.CommitmentProof_Exist{
 			Exist: exist,
 		},
 	}
 	proofOp := types.NewIavlCommitmentOp(exist.Key, commitmentProof).ProofOp()
-	return &proofOp
+	return proofOp
 }
 
 //----------------------------------------

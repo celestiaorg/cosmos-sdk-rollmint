@@ -63,7 +63,7 @@ require (
 	sigs.k8s.io/yaml v1.3.0
 )
 
-require github.com/chrispappas/golang-generics-set v1.0.1
+require github.com/chrispappas/golang-generics-set v1.0.1 // indirect
 
 require (
 	cloud.google.com/go v0.102.1 // indirect
@@ -234,7 +234,7 @@ require (
 	golang.org/x/net v0.0.0-20221012135044-0b7e1fb9d458 // indirect
 	golang.org/x/oauth2 v0.0.0-20220622183110-fd043fe589d2 // indirect
 	golang.org/x/sync v0.0.0-20220819030929-7fc1605a5dde // indirect
-	golang.org/x/sys v0.0.0-20221013171732-95e765b1cc43 // indirect
+	golang.org/x/sys v0.2.0 // indirect
 	golang.org/x/term v0.0.0-20220722155259-a9ba230a4035 // indirect
 	golang.org/x/text v0.3.8 // indirect
 	golang.org/x/tools v0.1.12 // indirect
@@ -251,7 +251,7 @@ require (
 
 replace (
 	github.com/cosmos/cosmos-sdk/db => ./db
-	github.com/cosmos/iavl => github.com/celestiaorg/iavl v0.0.0-20221101164141-98568c28689f
+	github.com/cosmos/iavl => github.com/celestiaorg/iavl v0.0.0-20221127054534-5eee6e6ac01e
 	// Fix upstream GHSA-h395-qcrw-5vmq vulnerability.
 	// TODO Remove it: https://github.com/cosmos/cosmos-sdk/issues/10409
 	github.com/gin-gonic/gin => github.com/gin-gonic/gin v1.7.0

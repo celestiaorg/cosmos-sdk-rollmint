@@ -6,7 +6,6 @@ import (
 	"io"
 	"testing"
 
-	"github.com/chrispappas/golang-generics-set/set"
 	"github.com/stretchr/testify/require"
 
 	dbm "github.com/tendermint/tm-db"
@@ -115,10 +114,10 @@ func TestTraceKVStoreSet(t *testing.T) {
 }
 
 func TestGetAllKeysUsedInTrace(t *testing.T) {
-	expectedKeys := set.FromSlice([]string{
-		string(kvPairs[0].Key),
-		string(kvPairs[1].Key),
-		string(kvPairs[2].Key),
+	expectedTraceOperations := ([]types.TraceOperation{
+		{Operation: "write", Key: string(kvPairs[0].Key), Value: string(kvPairs[0].Value)},
+		{Operation: "write", Key: string(kvPairs[1].Key), Value: string(kvPairs[1].Value)},
+		{Operation: "write", Key: string(kvPairs[2].Key), Value: string(kvPairs[2].Value)},
 	})
 
 	var buf bytes.Buffer
@@ -129,8 +128,8 @@ func TestGetAllKeysUsedInTrace(t *testing.T) {
 		store.Set(kvPair.Key, kvPair.Value)
 	}
 
-	keys := store.GetAllKeysUsedInTrace(buf)
-	require.Equal(t, expectedKeys, keys)
+	traceOps := store.GetAllOperations(buf)
+	require.Equal(t, expectedTraceOperations, traceOps)
 }
 
 func TestTraceKVStoreDelete(t *testing.T) {

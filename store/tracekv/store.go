@@ -8,7 +8,6 @@ import (
 	"io"
 
 	sdkerrors "cosmossdk.io/errors"
-	"github.com/chrispappas/golang-generics-set/set"
 	"github.com/cosmos/cosmos-sdk/store/types"
 )
 
@@ -97,25 +96,33 @@ func (tkv *Store) ReverseIterator(start, end []byte) types.Iterator {
 	return tkv.iterator(start, end, false)
 }
 
-// GetAllKeysUsedInTrace reads through all traced operations and returns
-// a set of all the keys inside the trace operations
-func (tkv *Store) GetAllKeysUsedInTrace(buf bytes.Buffer) set.Set[string] {
-
-	keys := make(set.Set[string], 0)
+// GetAllOperations reads through all traced operations and returns
+// list of them with key and values decoded from base64 encoding
+func (tkv *Store) GetAllOperations(buf bytes.Buffer) []types.TraceOperation {
+	traceOps := make([]types.TraceOperation, 0)
 	for {
-		traceOp, err := readOperation(&buf)
+		op, err := readOperation(&buf)
 		// Reached end of buffer
 		if err == ErrBufferEmpty {
-			return keys
+			return traceOps
 		}
 		if err != nil {
 			panic(err)
 		}
-		key, err := base64.StdEncoding.DecodeString(traceOp.Key)
+
+		key, err := base64.StdEncoding.DecodeString(op.Key)
 		if err != nil {
 			panic(sdkerrors.Wrap(err, "failed to decode key read from buf"))
 		}
-		keys.Add(string(key))
+		value, err := base64.StdEncoding.DecodeString(op.Value)
+		if err != nil {
+			panic(sdkerrors.Wrap(err, "failed to decode value read from buf"))
+		}
+		traceOps = append(traceOps, types.TraceOperation{
+			Operation: types.Operation(op.Operation),
+			Key:       string(key),
+			Value:     string(value),
+		})
 	}
 }
 

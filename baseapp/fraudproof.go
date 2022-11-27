@@ -47,10 +47,10 @@ type StateWitness struct {
 
 // Witness data containing a key/value pair and a IAVL proof for said key/value pair
 type WitnessData struct {
-	// TODO: Key and Value can be removed since they're contained in Proof
-	Key   []byte
-	Value []byte
-	Proof tmcrypto.ProofOp
+	Operation types.Operation
+	Key       []byte
+	Value     []byte
+	Proofs    []tmcrypto.ProofOp
 }
 
 func (fraudProof *FraudProof) getModules() []string {
