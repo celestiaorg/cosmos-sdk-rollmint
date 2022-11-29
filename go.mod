@@ -256,7 +256,7 @@ replace (
 	// TODO Remove it: https://github.com/cosmos/cosmos-sdk/issues/10409
 	github.com/gin-gonic/gin => github.com/gin-gonic/gin v1.7.0
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
-	github.com/tendermint/tendermint => github.com/celestiaorg/tendermint v0.34.18-0.20221013213714-8be9b54c8c21
+	github.com/tendermint/tendermint => github.com/celestiaorg/tendermint v0.34.22-0.20221129185527-17adf5012374
 )
 
 retract v0.46.2

@@ -880,7 +880,7 @@ func (app *BaseApp) getFraudProof(storeKeyToTraceBuf map[string]*bytes.Buffer) (
 		stateWitness := StateWitness{
 			Proof:       *proof,
 			RootHash:    rootHash,
-			WitnessData: make([]WitnessData, 0),
+			WitnessData: make([]*WitnessData, 0),
 		}
 		populateStateWitness(&stateWitness, iavlStore)
 		fraudProof.stateWitness[storeKeyName] = stateWitness
@@ -900,7 +900,7 @@ func populateStateWitness(stateWitness *StateWitness, iavlStore *iavl.Store) {
 			Value:     iavlTraceOp.Value,
 			Proofs:    proofOps,
 		}
-		stateWitness.WitnessData = append(stateWitness.WitnessData, witnessData)
+		stateWitness.WitnessData = append(stateWitness.WitnessData, &witnessData)
 	}
 }
 

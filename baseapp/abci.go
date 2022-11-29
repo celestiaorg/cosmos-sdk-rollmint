@@ -231,9 +231,12 @@ func (app *BaseApp) GenerateFraudProof(req abci.RequestGenerateFraudProof) (res 
 	default:
 		fraudProof.fraudulentEndBlock = req.EndBlockRequest
 	}
-	abciFraudProof := fraudProof.toABCI()
+	abciFraudProof, err := fraudProof.toABCI()
+	if err != nil {
+		panic(err)
+	}
 	res = abci.ResponseGenerateFraudProof{
-		FraudProof: &abciFraudProof,
+		FraudProof: abciFraudProof,
 	}
 	return res
 }
@@ -245,7 +248,10 @@ func (app *BaseApp) GenerateFraudProof(req abci.RequestGenerateFraudProof) (res 
 func (app *BaseApp) VerifyFraudProof(req abci.RequestVerifyFraudProof) (res abci.ResponseVerifyFraudProof) {
 	abciFraudProof := req.FraudProof
 	fraudProof := FraudProof{}
-	fraudProof.fromABCI(*abciFraudProof)
+	err := fraudProof.fromABCI(*abciFraudProof)
+	if err != nil {
+		panic(err)
+	}
 
 	// First two levels of verification
 	success, err := fraudProof.verifyFraudProof()

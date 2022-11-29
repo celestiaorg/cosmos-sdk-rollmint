@@ -43,7 +43,7 @@ type StateWitness struct {
 	Proof    tmcrypto.ProofOp
 	RootHash []byte
 	// List of witness data
-	WitnessData []WitnessData
+	WitnessData []*WitnessData
 }
 
 // Witness data represents a trace operation along with inclusion proofs required for said operation
@@ -51,14 +51,14 @@ type WitnessData struct {
 	Operation iavl.Operation
 	Key       []byte
 	Value     []byte
-	Proofs    []tmcrypto.ProofOp
+	Proofs    []*tmcrypto.ProofOp
 }
 
-func convertToProofOps(existenceProofs []*ics23.ExistenceProof) []tmcrypto.ProofOp {
+func convertToProofOps(existenceProofs []*ics23.ExistenceProof) []*tmcrypto.ProofOp {
 	if existenceProofs == nil {
 		return nil
 	}
-	proofOps := make([]tmcrypto.ProofOp, 0)
+	proofOps := make([]*tmcrypto.ProofOp, 0)
 	for _, existenceProof := range existenceProofs {
 		proofOps = append(proofOps, getProofOp(existenceProof))
 	}
@@ -66,20 +66,20 @@ func convertToProofOps(existenceProofs []*ics23.ExistenceProof) []tmcrypto.Proof
 
 }
 
-func getProofOp(exist *ics23.ExistenceProof) tmcrypto.ProofOp {
+func getProofOp(exist *ics23.ExistenceProof) *tmcrypto.ProofOp {
 	commitmentProof := &ics23.CommitmentProof{
 		Proof: &ics23.CommitmentProof_Exist{
 			Exist: exist,
 		},
 	}
 	proofOp := types.NewIavlCommitmentOp(exist.Key, commitmentProof).ProofOp()
-	return proofOp
+	return &proofOp
 }
 
-func convertToExistenceProofs(proofs []tmcrypto.ProofOp) ([]*ics23.ExistenceProof, error) {
+func convertToExistenceProofs(proofs []*tmcrypto.ProofOp) ([]*ics23.ExistenceProof, error) {
 	existenceProofs := make([]*ics23.ExistenceProof, 0)
 	for _, proof := range proofs {
-		_, existenceProof, err := getExistenceProof(proof)
+		_, existenceProof, err := getExistenceProof(*proof)
 		if err != nil {
 			return nil, err
 		}
@@ -169,7 +169,7 @@ func (fraudProof *FraudProof) verifyFraudProof() (bool, error) {
 		if len(stateWitness.WitnessData) > 0 {
 			witness := stateWitness.WitnessData[0]
 			for _, proofOp := range witness.Proofs {
-				op, existenceProof, err := getExistenceProof(proofOp)
+				op, existenceProof, err := getExistenceProof(*proofOp)
 				if err != nil {
 					return false, err
 				}
@@ -183,15 +183,44 @@ func (fraudProof *FraudProof) verifyFraudProof() (bool, error) {
 	return true, nil
 }
 
-func (fraudProof *FraudProof) toABCI() abci.FraudProof {
+func toABCI(operation iavl.Operation) (abci.Operation, error) {
+	if operation == iavl.WriteOp {
+		return abci.Operation_write, nil
+	} else if operation == iavl.ReadOp {
+		return abci.Operation_read, nil
+	} else if operation == iavl.DeleteOp {
+		return abci.Operation_delete, nil
+	} else {
+		return -1, fmt.Errorf("Unsupported opearation: %s", operation)
+	}
+}
+
+func fromABCI(operation abci.Operation) (iavl.Operation, error) {
+	if operation == abci.Operation_write {
+		return iavl.WriteOp, nil
+	} else if operation == abci.Operation_read {
+		return iavl.ReadOp, nil
+	} else if operation == abci.Operation_delete {
+		return iavl.DeleteOp, nil
+	} else {
+		return iavl.Operation(-1), fmt.Errorf("Unsupported opearation: %s", operation.String())
+	}
+}
+
+func (fraudProof *FraudProof) toABCI() (*abci.FraudProof, error) {
 	abciStateWitness := make(map[string]*abci.StateWitness)
 	for storeKey, stateWitness := range fraudProof.stateWitness {
 		abciWitnessData := make([]*abci.WitnessData, 0, len(stateWitness.WitnessData))
 		for _, witnessData := range stateWitness.WitnessData {
+			abciOperation, err := toABCI(witnessData.Operation)
+			if err != nil {
+				return nil, err
+			}
 			abciWitness := abci.WitnessData{
-				Key:   witnessData.Key,
-				Value: witnessData.Value,
-				Proof: &witnessData.Proof,
+				Operation: abciOperation,
+				Key:       witnessData.Key,
+				Value:     witnessData.Value,
+				Proofs:    witnessData.Proofs,
 			}
 			abciWitnessData = append(abciWitnessData, &abciWitness)
 		}
@@ -202,27 +231,32 @@ func (fraudProof *FraudProof) toABCI() abci.FraudProof {
 			WitnessData: abciWitnessData,
 		}
 	}
-	return abci.FraudProof{
+	return &abci.FraudProof{
 		BlockHeight:          fraudProof.blockHeight,
 		AppHash:              fraudProof.appHash,
 		StateWitness:         abciStateWitness,
 		FraudulentBeginBlock: fraudProof.fraudulentBeginBlock,
 		FraudulentDeliverTx:  fraudProof.fraudulentDeliverTx,
 		FraudulentEndBlock:   fraudProof.fraudulentEndBlock,
-	}
+	}, nil
 }
 
-func (fraudProof *FraudProof) fromABCI(abciFraudProof abci.FraudProof) {
+func (fraudProof *FraudProof) fromABCI(abciFraudProof abci.FraudProof) error {
 	stateWitness := make(map[string]StateWitness)
 	for storeKey, abciStateWitness := range abciFraudProof.StateWitness {
-		witnessData := make([]WitnessData, 0, len(abciStateWitness.WitnessData))
+		witnessData := make([]*WitnessData, 0, len(abciStateWitness.WitnessData))
 		for _, abciWitnessData := range abciStateWitness.WitnessData {
-			witness := WitnessData{
-				Key:   abciWitnessData.Key,
-				Value: abciWitnessData.Value,
-				Proof: *abciWitnessData.Proof,
+			iavlOperation, err := fromABCI(abciWitnessData.Operation)
+			if err != nil {
+				return err
 			}
-			witnessData = append(witnessData, witness)
+			witness := WitnessData{
+				Operation: iavlOperation,
+				Key:       abciWitnessData.Key,
+				Value:     abciWitnessData.Value,
+				Proofs:    abciWitnessData.Proofs,
+			}
+			witnessData = append(witnessData, &witness)
 		}
 		stateWitness[storeKey] = StateWitness{
 			Proof:       *abciStateWitness.Proof,
@@ -236,4 +270,5 @@ func (fraudProof *FraudProof) fromABCI(abciFraudProof abci.FraudProof) {
 	fraudProof.fraudulentBeginBlock = abciFraudProof.FraudulentBeginBlock
 	fraudProof.fraudulentDeliverTx = abciFraudProof.FraudulentDeliverTx
 	fraudProof.fraudulentEndBlock = abciFraudProof.FraudulentEndBlock
+	return nil
 }

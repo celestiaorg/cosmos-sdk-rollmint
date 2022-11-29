@@ -2367,7 +2367,8 @@ func TestGenerateAndLoadFraudProof(t *testing.T) {
 
 	// Light Client
 	fraudProof := FraudProof{}
-	fraudProof.fromABCI(*resp.FraudProof)
+	err = fraudProof.fromABCI(*resp.FraudProof)
+	require.Nil(t, err)
 	require.Equal(t, appHashB1, fraudProof.appHash)
 	fraudProofVerified, err := fraudProof.verifyFraudProof()
 	require.Nil(t, err)

@@ -200,8 +200,8 @@ github.com/celestiaorg/rollmint v0.4.0 h1:+eu2m25ALhlHj9pbAElzq2pSg6WJ4Bn8/WqL2H
 github.com/celestiaorg/rollmint v0.4.0/go.mod h1:EBnqxgmcH0MIgNgiI8NyVa1sNSzCyCpvAlAHd9myhk4=
 github.com/celestiaorg/smt v0.3.0 h1:Hc6m8fIVRajrg/Saf8ivX4xw551LHzOs8kqeadd6h9s=
 github.com/celestiaorg/smt v0.3.0/go.mod h1:/sdYDakowo/XaxS2Fl7CBqtuf/O2uTqF2zmAUFAtAiw=
-github.com/celestiaorg/tendermint v0.34.18-0.20221013213714-8be9b54c8c21 h1:eRc/DaqHOw35b4Kf2Fqu1frD/88TD3enIcbzWJu2MIg=
-github.com/celestiaorg/tendermint v0.34.18-0.20221013213714-8be9b54c8c21/go.mod h1:zoyyiiihvTW8DnOr63YLxhYn/WK/QmE74CeIpS++hBE=
+github.com/celestiaorg/tendermint v0.34.22-0.20221129185527-17adf5012374 h1:AoxKmsmDDZdbiP+0BtOa8cXaztA8BnD8mbcsfTksdeQ=
+github.com/celestiaorg/tendermint v0.34.22-0.20221129185527-17adf5012374/go.mod h1:zoyyiiihvTW8DnOr63YLxhYn/WK/QmE74CeIpS++hBE=
 github.com/cenkalti/backoff v2.2.1+incompatible h1:tNowT99t7UNflLxfYYSlKYsBpXdEet03Pg2g16Swow4=
 github.com/cenkalti/backoff v2.2.1+incompatible/go.mod h1:90ReRw6GdpyfrHakVjL/QHaoyV4aDUVVkXQJJJ3NXXM=
 github.com/cenkalti/backoff/v4 v4.1.1 h1:G2HAfAmvm/GcKan2oOQpBXOd2tT2G57ZnZGWa1PxPBQ=
