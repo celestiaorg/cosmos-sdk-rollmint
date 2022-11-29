@@ -79,14 +79,23 @@ func getProofOp(exist *ics23.ExistenceProof) tmcrypto.ProofOp {
 func convertToExistenceProofs(proofs []tmcrypto.ProofOp) ([]*ics23.ExistenceProof, error) {
 	existenceProofs := make([]*ics23.ExistenceProof, 0)
 	for _, proof := range proofs {
-		proofOp, err := types.CommitmentOpDecoder(proof)
+		_, existenceProof, err := getExistenceProof(proof)
 		if err != nil {
 			return nil, err
 		}
-		commitmentProof := proofOp.(types.CommitmentOp).GetProof()
-		existenceProofs = append(existenceProofs, commitmentProof.GetExist())
+		existenceProofs = append(existenceProofs, existenceProof)
 	}
 	return existenceProofs, nil
+}
+
+func getExistenceProof(proofOp tmcrypto.ProofOp) (types.CommitmentOp, *ics23.ExistenceProof, error) {
+	op, err := types.CommitmentOpDecoder(proofOp)
+	if err != nil {
+		return types.CommitmentOp{}, nil, err
+	}
+	commitmentOp := op.(types.CommitmentOp)
+	commitmentProof := commitmentOp.GetProof()
+	return commitmentOp, commitmentProof.GetExist(), nil
 }
 
 func (fraudProof *FraudProof) getModules() []string {
@@ -153,25 +162,21 @@ func (fraudProof *FraudProof) verifyFraudProof() (bool, error) {
 		if !bytes.Equal(appHash[0], fraudProof.appHash) {
 			return false, fmt.Errorf("got appHash: %s, expected: %s", string(fraudProof.appHash), string(fraudProof.appHash))
 		}
+
 		// Fraudproof verification on a substore level
-		for _, witness := range stateWitness.WitnessData {
-			proofOp, key, value := witness.Proof, witness.Key, witness.Value
-			if err != nil {
-				return false, err
-			}
-			if !bytes.Equal(key, proofOp.GetKey()) {
-				return false, fmt.Errorf("got key: %s, expected: %s for storeKey: %s", string(key), string(proof.GetKey()), storeKey)
-			}
-			proof, err := types.CommitmentOpDecoder(proofOp)
-			if err != nil {
-				return false, err
-			}
-			rootHash, err := proof.Run([][]byte{value})
-			if err != nil {
-				return false, err
-			}
-			if !bytes.Equal(rootHash[0], stateWitness.RootHash) {
-				return false, fmt.Errorf("got rootHash: %s, expected: %s for storeKey: %s", string(rootHash[0]), string(stateWitness.RootHash), storeKey)
+		// Note: We can only verify the first witness in this witnessData
+		// with current root hash. Other proofs are verified in the IAVL tree.
+		if len(stateWitness.WitnessData) > 0 {
+			witness := stateWitness.WitnessData[0]
+			for _, proofOp := range witness.Proofs {
+				op, existenceProof, err := getExistenceProof(proofOp)
+				if err != nil {
+					return false, err
+				}
+				verified := ics23.VerifyMembership(op.Spec, stateWitness.RootHash, op.Proof, op.Key, existenceProof.Value)
+				if !verified {
+					return false, fmt.Errorf("existence proof verification failed, expected rootHash: %s, key: %s, value: %s for storeKey: %s", string(stateWitness.RootHash), string(op.Key), string(existenceProof.Value), storeKey)
+				}
 			}
 		}
 	}
