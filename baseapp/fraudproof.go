@@ -191,7 +191,7 @@ func toABCI(operation iavl.Operation) (abci.Operation, error) {
 	} else if operation == iavl.DeleteOp {
 		return abci.Operation_delete, nil
 	} else {
-		return -1, fmt.Errorf("Unsupported opearation: %s", operation)
+		return -1, fmt.Errorf("unsupported opearation: %s", operation)
 	}
 }
 
@@ -203,7 +203,7 @@ func fromABCI(operation abci.Operation) (iavl.Operation, error) {
 	} else if operation == abci.Operation_delete {
 		return iavl.DeleteOp, nil
 	} else {
-		return iavl.Operation(-1), fmt.Errorf("Unsupported opearation: %s", operation.String())
+		return iavl.Operation("unknown"), fmt.Errorf("unsupported opearation: %s", operation.String())
 	}
 }
 
