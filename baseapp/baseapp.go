@@ -19,8 +19,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/store"
 	iavl "github.com/cosmos/cosmos-sdk/store/iavl"
 	"github.com/cosmos/cosmos-sdk/store/rootmulti"
-	"github.com/cosmos/cosmos-sdk/store/tracekv"
-	"github.com/cosmos/cosmos-sdk/store/types"
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
@@ -863,10 +861,7 @@ func (app *BaseApp) getFraudProof(storeKeyToTraceBuf map[string]*bytes.Buffer) (
 		return FraudProof{}, err
 	}
 	fraudProof.appHash = appHash
-	nameToStoreKey := cms.StoreKeysByName()
-	for storeKeyName, traceBuf := range storeKeyToTraceBuf {
-		storeKey := nameToStoreKey[storeKeyName]
-		traceOps := cms.GetKVStore(storeKey).(*tracekv.Store).GetAllOperations(*traceBuf)
+	for storeKeyName, _ := range storeKeyToTraceBuf {
 		iavlStore, err := cms.GetIAVLStore(storeKeyName)
 		if err != nil {
 			return FraudProof{}, err
@@ -887,7 +882,7 @@ func (app *BaseApp) getFraudProof(storeKeyToTraceBuf map[string]*bytes.Buffer) (
 			RootHash:    rootHash,
 			WitnessData: make([]WitnessData, 0),
 		}
-		populateStateWitness(&stateWitness, iavlStore, traceOps)
+		populateStateWitness(&stateWitness, iavlStore)
 		fraudProof.stateWitness[storeKeyName] = stateWitness
 	}
 
@@ -895,16 +890,15 @@ func (app *BaseApp) getFraudProof(storeKeyToTraceBuf map[string]*bytes.Buffer) (
 }
 
 // populates the given state witness using traced keys and underlying iavl store
-func populateStateWitness(stateWitness *StateWitness, iavlStore *iavl.Store, traceOps []types.TraceOperation) {
-	for _, traceOp := range traceOps {
-		bKey, bValue := []byte(traceOp.Key), []byte(traceOp.Value)
-		proofs := iavlStore.GetProofsNeeded(traceOp.Operation, bKey, bValue)
-
+func populateStateWitness(stateWitness *StateWitness, iavlStore *iavl.Store) {
+	iavlWitnessData := iavlStore.GetWitnessData()
+	for _, iavlTraceOp := range iavlWitnessData {
+		proofOps := convertToProofOps(iavlTraceOp.Proofs)
 		witnessData := WitnessData{
-			Operation: traceOp.Operation,
-			Key:       bKey,
-			Value:     bValue,
-			Proofs:    proofs,
+			Operation: iavlTraceOp.Operation,
+			Key:       iavlTraceOp.Key,
+			Value:     iavlTraceOp.Value,
+			Proofs:    proofOps,
 		}
 		stateWitness.WitnessData = append(stateWitness.WitnessData, witnessData)
 	}

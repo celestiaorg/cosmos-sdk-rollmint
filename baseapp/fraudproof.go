@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	ics23 "github.com/confio/ics23/go"
 	"github.com/cosmos/cosmos-sdk/store/types"
 	"github.com/cosmos/iavl"
 	abci "github.com/tendermint/tendermint/abci/types"
@@ -47,10 +48,45 @@ type StateWitness struct {
 
 // Witness data represents a trace operation along with inclusion proofs required for said operation
 type WitnessData struct {
-	Operation types.Operation
+	Operation iavl.Operation
 	Key       []byte
 	Value     []byte
 	Proofs    []tmcrypto.ProofOp
+}
+
+func convertToProofOps(existenceProofs []*ics23.ExistenceProof) []tmcrypto.ProofOp {
+	if existenceProofs == nil {
+		return nil
+	}
+	proofOps := make([]tmcrypto.ProofOp, 0)
+	for _, existenceProof := range existenceProofs {
+		proofOps = append(proofOps, getProofOp(existenceProof))
+	}
+	return proofOps
+
+}
+
+func getProofOp(exist *ics23.ExistenceProof) tmcrypto.ProofOp {
+	commitmentProof := &ics23.CommitmentProof{
+		Proof: &ics23.CommitmentProof_Exist{
+			Exist: exist,
+		},
+	}
+	proofOp := types.NewIavlCommitmentOp(exist.Key, commitmentProof).ProofOp()
+	return proofOp
+}
+
+func convertToExistenceProofs(proofs []tmcrypto.ProofOp) ([]*ics23.ExistenceProof, error) {
+	existenceProofs := make([]*ics23.ExistenceProof, 0)
+	for _, proof := range proofs {
+		proofOp, err := types.CommitmentOpDecoder(proof)
+		if err != nil {
+			return nil, err
+		}
+		commitmentProof := proofOp.(types.CommitmentOp).GetProof()
+		existenceProofs = append(existenceProofs, commitmentProof.GetExist())
+	}
+	return existenceProofs, nil
 }
 
 func (fraudProof *FraudProof) getModules() []string {
@@ -64,25 +100,22 @@ func (fraudProof *FraudProof) getModules() []string {
 func (fraudProof *FraudProof) getDeepIAVLTrees() (map[string]*iavl.DeepSubTree, error) {
 	storeKeyToIAVLTree := make(map[string]*iavl.DeepSubTree)
 	for storeKey, stateWitness := range fraudProof.stateWitness {
-		dst, err := iavl.NewDeepSubTree(db.NewMemDB(), 100, false, fraudProof.blockHeight)
-		if err != nil {
-			return nil, err
-		}
+		dst := iavl.NewDeepSubTree(db.NewMemDB(), 100, false, fraudProof.blockHeight)
+		iavlWitnessData := make([]iavl.WitnessData, 0)
 		for _, witnessData := range stateWitness.WitnessData {
-			proofOp, _, _ := witnessData.Proof, witnessData.Key, witnessData.Value
-			proof, err := types.CommitmentOpDecoder(proofOp)
+			existenceProofs, err := convertToExistenceProofs(witnessData.Proofs)
 			if err != nil {
 				return nil, err
 			}
-			iavlProof := proof.(types.CommitmentOp).Proof
-			err = dst.AddExistenceProof(iavlProof.GetExist())
-			if err != nil {
-				return nil, err
-			}
-		}
-		err = dst.BuildTree(stateWitness.RootHash)
-		if err != nil {
-			return nil, err
+			iavlWitnessData = append(
+				iavlWitnessData,
+				iavl.WitnessData{
+					Operation: iavl.Operation(witnessData.Operation),
+					Key:       witnessData.Key,
+					Value:     witnessData.Value,
+					Proofs:    existenceProofs,
+				},
+			)
 		}
 		storeKeyToIAVLTree[storeKey] = dst
 	}

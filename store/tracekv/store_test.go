@@ -113,25 +113,6 @@ func TestTraceKVStoreSet(t *testing.T) {
 	require.Panics(t, func() { store.Set(nil, []byte("value")) }, "setting a nil key should panic")
 }
 
-func TestGetAllKeysUsedInTrace(t *testing.T) {
-	expectedTraceOperations := ([]types.TraceOperation{
-		{Operation: "write", Key: string(kvPairs[0].Key), Value: string(kvPairs[0].Value)},
-		{Operation: "write", Key: string(kvPairs[1].Key), Value: string(kvPairs[1].Value)},
-		{Operation: "write", Key: string(kvPairs[2].Key), Value: string(kvPairs[2].Value)},
-	})
-
-	var buf bytes.Buffer
-	store := newEmptyTraceKVStore(&buf)
-	buf.Reset()
-
-	for _, kvPair := range kvPairs {
-		store.Set(kvPair.Key, kvPair.Value)
-	}
-
-	traceOps := store.GetAllOperations(buf)
-	require.Equal(t, expectedTraceOperations, traceOps)
-}
-
 func TestTraceKVStoreDelete(t *testing.T) {
 	testCases := []struct {
 		key         []byte

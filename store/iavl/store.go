@@ -434,52 +434,10 @@ func getProofFromTree(tree *iavl.MutableTree, key []byte, exists bool) *tmcrypto
 }
 
 // Takes a MutableTree, and a key and returns a DST Non-Existence Proof for the key
-func (st *Store) GetProofsNeeded(operation types.Operation, key []byte, value []byte) []tmcrypto.ProofOp {
+func (st *Store) GetWitnessData() []iavl.WitnessData {
 	// value wasn't found
 	iavlTree := st.tree.((*iavl.MutableTree))
-	if operation == "read" {
-		existenceProofs, err := iavlTree.GetExistenceProofsNeededForGet(key)
-		if err != nil {
-			panic(fmt.Sprintf("unexpected error while getting existence proofs for get: %s", err.Error()))
-		}
-		return convertToProofOps(existenceProofs)
-	} else if operation == "write" {
-		existenceProofs, err := iavlTree.GetExistenceProofsNeededForSet(key, value)
-		if err != nil {
-			panic(fmt.Sprintf("unexpected error while getting existence proofs for set: %s", err.Error()))
-		}
-		return convertToProofOps(existenceProofs)
-	} else if operation == "delete" {
-		existenceProofs, err := iavlTree.GetExistenceProofsNeededForRemove(key)
-		if err != nil {
-			panic(fmt.Sprintf("unexpected error while getting existence proofs for remove: %s", err.Error()))
-		}
-		return convertToProofOps(existenceProofs)
-	} else {
-		panic(fmt.Sprintf("%s: operation not supported", operation))
-	}
-}
-
-func convertToProofOps(existenceProofs []*ics23.ExistenceProof) []tmcrypto.ProofOp {
-	if existenceProofs == nil {
-		return nil
-	}
-	proofOps := make([]tmcrypto.ProofOp, 0)
-	for _, existenceProof := range existenceProofs {
-		proofOps = append(proofOps, getProofOp(existenceProof))
-	}
-	return proofOps
-
-}
-
-func getProofOp(exist *ics23.ExistenceProof) tmcrypto.ProofOp {
-	commitmentProof := &ics23.CommitmentProof{
-		Proof: &ics23.CommitmentProof_Exist{
-			Exist: exist,
-		},
-	}
-	proofOp := types.NewIavlCommitmentOp(exist.Key, commitmentProof).ProofOp()
-	return proofOp
+	return iavlTree.GetWitnessData()
 }
 
 //----------------------------------------
