@@ -293,12 +293,6 @@ func (st *Store) Import(version int64) (*iavl.Importer, error) {
 	return tree.Import(version)
 }
 
-// Wrapper for getProofFromTree
-func (st *Store) GetProofFromTree(key []byte) *tmcrypto.ProofOps {
-	iavlTree := st.tree.((*iavl.MutableTree))
-	return getProofFromTree(iavlTree, key, true)
-}
-
 func (st *Store) Root() ([]byte, error) {
 	iavlTree, ok := st.tree.(*iavl.MutableTree)
 	if !ok {

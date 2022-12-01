@@ -1,7 +1,6 @@
 package tracekv
 
 import (
-	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -207,23 +206,4 @@ func writeOperation(w io.Writer, op operation, tc types.TraceContext, key, value
 	}
 
 	io.WriteString(w, "\n")
-}
-
-// readOperation reads a KVStore operation from the underlying buffer as
-// JSON-encoded data where the key/value pair is base64 encoded.
-func readOperation(r *bytes.Buffer) (*traceOperation, error) {
-	raw, err := r.ReadString('\n')
-	if raw == "" {
-		return nil, ErrBufferEmpty
-	}
-	if err != nil {
-		return nil, sdkerrors.Wrap(err, "failed to read trace operation")
-	}
-	traceOp := traceOperation{}
-	err = json.Unmarshal([]byte(raw), &traceOp)
-	if err != nil {
-		return nil, sdkerrors.Wrap(err, "failed to deserialize trace operation")
-	}
-
-	return &traceOp, nil
 }
