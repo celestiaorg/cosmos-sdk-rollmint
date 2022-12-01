@@ -123,11 +123,6 @@ type MultiStore interface {
 	// returned.
 	SetTracer(w io.Writer) MultiStore
 
-	// SetTracerFor sets the tracer for a particular underlying store in the
-	// Multistore that will utilize to trace operations. The modified MultiStore is
-	// returned.
-	SetTracerFor(skey string, w io.Writer) MultiStore
-
 	// SetTracingContext sets the tracing context for a MultiStore. It is
 	// implied that the caller should update the context when necessary between
 	// tracing operations. The modified MultiStore is returned.

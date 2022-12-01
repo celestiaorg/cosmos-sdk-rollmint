@@ -201,12 +201,6 @@ func (app *BaseApp) SetCommitMultiStoreTracer(w io.Writer) {
 	app.cms.SetTracer(w)
 }
 
-// SetCommitKVStoreTracer sets the store tracer on the BaseApp's underlying
-// tracer for a substore with given skey.
-func (app *BaseApp) SetCommitKVStoreTracer(skey string, w io.Writer) {
-	app.cms.SetTracerFor(skey, w)
-}
-
 // SetStoreLoader allows us to customize the rootMultiStore initialization.
 func (app *BaseApp) SetStoreLoader(loader StoreLoader) {
 	if app.sealed {
