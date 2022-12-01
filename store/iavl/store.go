@@ -302,7 +302,9 @@ func (st *Store) GetProofFromTree(key []byte) *tmcrypto.ProofOps {
 func (st *Store) Root() ([]byte, error) {
 	iavlTree, ok := st.tree.(*iavl.MutableTree)
 	if !ok {
-		iavlTree = st.tree.(*iavl.DeepSubTree).MutableTree
+		iavlTree := st.tree.(*iavl.DeepSubTree)
+		rootHash, err := iavlTree.GetInitialRootHash()
+		return rootHash, err
 	}
 	hash, err := iavlTree.WorkingHash()
 	return hash, err
@@ -438,6 +440,11 @@ func (st *Store) GetWitnessData() []iavl.WitnessData {
 	// value wasn't found
 	iavlTree := st.tree.((*iavl.MutableTree))
 	return iavlTree.GetWitnessData()
+}
+
+func (st *Store) SetTracingEnabled(tracingEnabled bool) {
+	iavlTree := st.tree.((*iavl.MutableTree))
+	iavlTree.SetTracingEnabled(tracingEnabled)
 }
 
 //----------------------------------------

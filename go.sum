@@ -194,8 +194,8 @@ github.com/c-bata/go-prompt v0.2.2/go.mod h1:VzqtzE2ksDBcdln8G7mk2RX9QyGjH+OVqOC
 github.com/casbin/casbin/v2 v2.1.2/go.mod h1:YcPU1XXisHhLzuxH9coDNf2FbKpjGlbCg3n9yuLkIJQ=
 github.com/celestiaorg/go-cnc v0.1.0 h1:u986OnTc7AtbUZ4reY+zRCiar4fDdR1KehyP78uwsXg=
 github.com/celestiaorg/go-cnc v0.1.0/go.mod h1:Zf03bWWq6aldv5cYEaWvJ+I+z34bT/exrS0tO0y/jN8=
-github.com/celestiaorg/iavl v0.0.0-20221129074601-c43cce7a9696 h1:vKtUL25S0t11xv3SZMqjpQqgydwlmdJiZg8d3MOPkyc=
-github.com/celestiaorg/iavl v0.0.0-20221129074601-c43cce7a9696/go.mod h1:C1I+r1j4oBfP49Oyf4B43namZwEI52JpA7ULjCFSWng=
+github.com/celestiaorg/iavl v0.0.0-20221201041419-b174a3fde893 h1:gTAup3Z+ff422bCK1dmhMeWlJ3NrjKL+iXK/Q77Yce4=
+github.com/celestiaorg/iavl v0.0.0-20221201041419-b174a3fde893/go.mod h1:C1I+r1j4oBfP49Oyf4B43namZwEI52JpA7ULjCFSWng=
 github.com/celestiaorg/rollmint v0.4.0 h1:+eu2m25ALhlHj9pbAElzq2pSg6WJ4Bn8/WqL2H79rJI=
 github.com/celestiaorg/rollmint v0.4.0/go.mod h1:EBnqxgmcH0MIgNgiI8NyVa1sNSzCyCpvAlAHd9myhk4=
 github.com/celestiaorg/smt v0.3.0 h1:Hc6m8fIVRajrg/Saf8ivX4xw551LHzOs8kqeadd6h9s=

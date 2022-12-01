@@ -178,12 +178,15 @@ func (app *BaseApp) GenerateFraudProof(req abci.RequestGenerateFraudProof) (res 
 	beginBlockRequest := req.BeginBlockRequest
 	isBeginBlockFraudulent := req.DeliverTxRequests == nil
 	isDeliverTxFraudulent := req.EndBlockRequest == nil
+	if isBeginBlockFraudulent {
+		cms.SetTracingEnabledAll(true)
+	}
 	app.BeginBlock(beginBlockRequest)
 	if !isBeginBlockFraudulent {
 		// BeginBlock is not the fraudulent state transition
 		app.executeNonFraudulentTransactions(req, isDeliverTxFraudulent)
 
-		cms.ResetAllTraceWriters()
+		cms.SetTracingEnabledAll(true)
 
 		// Record the trace made by the fraudulent state transitions
 		if isDeliverTxFraudulent {
@@ -196,15 +199,11 @@ func (app *BaseApp) GenerateFraudProof(req abci.RequestGenerateFraudProof) (res 
 		}
 	}
 
-	// SubStore trace buffers now record the trace made by the fradulent state transition, so we copy them in new buffers
-	storeKeyToTraceBuf := make(map[string]*bytes.Buffer)
-	storeKeys := cms.GetStoreKeys()
-	for _, storeKey := range storeKeys {
-		subStoreTraceBuf := cms.GetTracerBufferFor(storeKey.Name())
-		traceBuf := bytes.Buffer{}
-		traceBuf.Write(subStoreTraceBuf.Bytes())
-		storeKeyToTraceBuf[storeKey.Name()] = &traceBuf
+	storeKeyToWitnessData, err := cms.GetWitnessDataMap()
+	if err != nil {
+		panic(err)
 	}
+
 	// Revert app to previous state
 	err = cms.LoadLastVersion()
 	if err != nil {
@@ -218,7 +217,7 @@ func (app *BaseApp) GenerateFraudProof(req abci.RequestGenerateFraudProof) (res 
 	}
 
 	// Export the app's current trace-filtered state into a Fraud Proof and return it
-	fraudProof, err := app.getFraudProof(storeKeyToTraceBuf)
+	fraudProof, err := app.getFraudProof(storeKeyToWitnessData)
 	if err != nil {
 		panic(err)
 	}

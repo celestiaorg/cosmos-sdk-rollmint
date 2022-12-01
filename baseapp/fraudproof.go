@@ -125,7 +125,9 @@ func (fraudProof *FraudProof) getDeepIAVLTrees() (map[string]*iavl.DeepSubTree, 
 					Proofs:    existenceProofs,
 				},
 			)
+			dst.SetWitnessData(iavlWitnessData)
 		}
+		dst.SetInitialRootHash(stateWitness.RootHash)
 		storeKeyToIAVLTree[storeKey] = dst
 	}
 	return storeKeyToIAVLTree, nil
@@ -184,25 +186,27 @@ func (fraudProof *FraudProof) verifyFraudProof() (bool, error) {
 }
 
 func toABCI(operation iavl.Operation) (abci.Operation, error) {
-	if operation == iavl.WriteOp {
+	switch operation {
+	case iavl.WriteOp:
 		return abci.Operation_write, nil
-	} else if operation == iavl.ReadOp {
+	case iavl.ReadOp:
 		return abci.Operation_read, nil
-	} else if operation == iavl.DeleteOp {
+	case iavl.DeleteOp:
 		return abci.Operation_delete, nil
-	} else {
+	default:
 		return -1, fmt.Errorf("unsupported opearation: %s", operation)
 	}
 }
 
 func fromABCI(operation abci.Operation) (iavl.Operation, error) {
-	if operation == abci.Operation_write {
+	switch operation {
+	case abci.Operation_write:
 		return iavl.WriteOp, nil
-	} else if operation == abci.Operation_read {
+	case abci.Operation_read:
 		return iavl.ReadOp, nil
-	} else if operation == abci.Operation_delete {
+	case abci.Operation_delete:
 		return iavl.DeleteOp, nil
-	} else {
+	default:
 		return iavl.Operation("unknown"), fmt.Errorf("unsupported opearation: %s", operation.String())
 	}
 }
