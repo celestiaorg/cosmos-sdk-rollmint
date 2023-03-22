@@ -16,11 +16,11 @@ import (
 	"github.com/tendermint/tendermint/privval"
 
 	"github.com/spf13/cobra"
-	abciclient "github.com/tendermint/tendermint/abci/client"
 	"github.com/tendermint/tendermint/abci/server"
 	tcmd "github.com/tendermint/tendermint/cmd/tendermint/commands"
 	tmos "github.com/tendermint/tendermint/libs/os"
 	tmservice "github.com/tendermint/tendermint/libs/service"
+	proxy "github.com/tendermint/tendermint/proxy"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
@@ -348,7 +348,7 @@ func startInProcess(ctx *Context, clientCtx client.Context, appCreator types.App
 			nodeConfig,
 			p2pKey,
 			signingKey,
-			abciclient.NewLocalClient(nil, app),
+			proxy.NewLocalClientCreator(app),
 			genDoc,
 			ctx.Logger,
 		)

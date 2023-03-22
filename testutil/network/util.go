@@ -7,11 +7,11 @@ import (
 	"path/filepath"
 	"time"
 
-	abciclient "github.com/tendermint/tendermint/abci/client"
 	tmos "github.com/tendermint/tendermint/libs/os"
 	"github.com/tendermint/tendermint/node"
 	"github.com/tendermint/tendermint/p2p"
 	"github.com/tendermint/tendermint/privval"
+	proxy "github.com/tendermint/tendermint/proxy"
 	"github.com/tendermint/tendermint/types"
 	tmtime "github.com/tendermint/tendermint/types/time"
 
@@ -77,7 +77,7 @@ func startInProcess(cfg Config, val *Validator) error {
 		nodeConfig,
 		p2pKey,
 		signingKey,
-		abciclient.NewLocalClient(nil, app),
+		proxy.NewLocalClientCreator(app),
 		genDoc,
 		logger,
 	)
