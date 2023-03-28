@@ -17,7 +17,6 @@ import (
 
 	dbm "github.com/cometbft/cometbft-db"
 	tmrand "github.com/cometbft/cometbft/libs/rand"
-	"github.com/cometbft/cometbft/node"
 	tmclient "github.com/cometbft/cometbft/rpc/client"
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
@@ -58,6 +57,8 @@ import (
 	_ "github.com/cosmos/cosmos-sdk/x/params"
 	_ "github.com/cosmos/cosmos-sdk/x/staking"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+
+	rollnode "github.com/rollkit/rollkit/node"
 )
 
 // package-wide network lock to only allow one test network at a time
@@ -239,7 +240,7 @@ type (
 		ValAddress sdk.ValAddress
 		RPCClient  tmclient.Client
 
-		tmNode  *node.Node
+		tmNode  rollnode.Node
 		api     *api.Server
 		grpc    *grpc.Server
 		grpcWeb *http.Server
@@ -684,8 +685,9 @@ func (n *Network) Cleanup() {
 	n.Logger.Log("cleaning up test network...")
 
 	for _, v := range n.Validators {
-		if v.tmNode != nil && v.tmNode.IsRunning() {
-			_ = v.tmNode.Stop()
+		// TODO(tzdybal): add IsRunning and Stop methods to Node interface
+		if v.tmNode != nil && v.tmNode.(*rollnode.FullNode).IsRunning() {
+			_ = v.tmNode.(*rollnode.FullNode).Stop()
 		}
 
 		if v.api != nil {
