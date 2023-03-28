@@ -1047,3 +1047,18 @@ func NoOpProcessProposal() sdk.ProcessProposalHandler {
 func (app *BaseApp) Close() error {
 	return nil
 }
+
+func (app *BaseApp) GetAppHash(hash abci.RequestGetAppHash) abci.ResponseGetAppHash {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (app *BaseApp) GenerateFraudProof(proof abci.RequestGenerateFraudProof) abci.ResponseGenerateFraudProof {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (app *BaseApp) VerifyFraudProof(proof abci.RequestVerifyFraudProof) abci.ResponseVerifyFraudProof {
+	//TODO implement me
+	panic("implement me")
+}
