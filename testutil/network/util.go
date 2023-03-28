@@ -8,22 +8,24 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/cometbft/cometbft/node"
+	abciclient "github.com/cometbft/cometbft/abci/client"
 	"github.com/cometbft/cometbft/p2p"
 	pvm "github.com/cometbft/cometbft/privval"
-	"github.com/cometbft/cometbft/proxy"
-	"github.com/cometbft/cometbft/rpc/client/local"
 	cmttypes "github.com/cometbft/cometbft/types"
 	cmttime "github.com/cometbft/cometbft/types/time"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/cosmos/cosmos-sdk/server/api"
 	servergrpc "github.com/cosmos/cosmos-sdk/server/grpc"
-	servercmtlog "github.com/cosmos/cosmos-sdk/server/log"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
+
+	rollconf "github.com/rollkit/rollkit/config"
+	rollconv "github.com/rollkit/rollkit/conv"
+	rollnode "github.com/rollkit/rollkit/node"
+	rollrpc "github.com/rollkit/rollkit/rpc"
 )
 
 func startInProcess(cfg Config, val *Validator) error {
@@ -40,6 +42,17 @@ func startInProcess(cfg Config, val *Validator) error {
 		return err
 	}
 
+	pval := pvm.LoadOrGenFilePV(tmCfg.PrivValidatorKeyFile(), tmCfg.PrivValidatorStateFile())
+	// keys in Rollkit format
+	p2pKey, err := rollconv.GetNodeKey(nodeKey)
+	if err != nil {
+		return err
+	}
+	signingKey, err := rollconv.GetNodeKey(&p2p.NodeKey{PrivKey: pval.Key.PrivKey})
+	if err != nil {
+		return err
+	}
+
 	app := cfg.AppConstructor(*val)
 	appGenesisProvider := func() (*cmttypes.GenesisDoc, error) {
 		appGenesis, err := genutiltypes.AppGenesisFromFile(cmtCfg.GenesisFile())
@@ -50,27 +63,47 @@ func startInProcess(cfg Config, val *Validator) error {
 		return appGenesis.ToGenesisDoc()
 	}
 
-	tmNode, err := node.NewNode( //resleak:notresource
-		cmtCfg,
-		pvm.LoadOrGenFilePV(cmtCfg.PrivValidatorKeyFile(), cmtCfg.PrivValidatorStateFile()),
-		nodeKey,
-		proxy.NewLocalClientCreator(app),
-		appGenesisProvider,
-		node.DefaultDBProvider,
-		node.DefaultMetricsProvider(cmtCfg.Instrumentation),
-		servercmtlog.CometZeroLogWrapper{Logger: logger.With("module", val.Moniker)},
+	genDoc, err := genDocProvider()
+	if err != nil {
+		return err
+	}
+
+	nodeConfig := rollconf.NodeConfig{}
+	err = nodeConfig.GetViperConfig(val.Ctx.Viper)
+	nodeConfig.Aggregator = true
+	nodeConfig.DALayer = "mock"
+	if err != nil {
+		return err
+	}
+	rollconv.GetNodeConfig(&nodeConfig, tmCfg)
+	err = rollconv.TranslateAddresses(&nodeConfig)
+	if err != nil {
+		return err
+	}
+	val.tmNode, err = rollnode.NewNode(
+		context.Background(),
+		nodeConfig,
+		p2pKey,
+		signingKey,
+		abciclient.NewLocalClient(nil, app),
+		genDoc,
+		logger,
 	)
 	if err != nil {
 		return err
 	}
 
-	if err := tmNode.Start(); err != nil {
+	if err := val.tmNode.Start(); err != nil {
 		return err
 	}
-	val.tmNode = tmNode
 
 	if val.RPCAddress != "" {
-		val.RPCClient = local.New(tmNode)
+		server := rollrpc.NewServer(val.tmNode, tmCfg.RPC, logger)
+		err = server.Start()
+		if err != nil {
+			return err
+		}
+		val.RPCClient = server.Client()
 	}
 
 	// We'll need a RPC client if the validator exposes a gRPC or REST endpoint.

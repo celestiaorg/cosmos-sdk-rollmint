@@ -8,13 +8,12 @@ import (
 	"runtime/pprof"
 
 	pruningtypes "cosmossdk.io/store/pruning/types"
+	abciclient "github.com/cometbft/cometbft/abci/client"
 	"github.com/cometbft/cometbft/abci/server"
 	cmtcmd "github.com/cometbft/cometbft/cmd/cometbft/commands"
 	"github.com/cometbft/cometbft/node"
 	"github.com/cometbft/cometbft/p2p"
 	pvm "github.com/cometbft/cometbft/privval"
-	"github.com/cometbft/cometbft/proxy"
-	"github.com/cometbft/cometbft/rpc/client/local"
 	cmttypes "github.com/cometbft/cometbft/types"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -33,6 +32,11 @@ import (
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	"github.com/cosmos/cosmos-sdk/types/mempool"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
+
+	rollconf "github.com/rollkit/rollkit/config"
+	rollconv "github.com/rollkit/rollkit/conv"
+	rollnode "github.com/rollkit/rollkit/node"
+	rollrpc "github.com/rollkit/rollkit/rpc"
 )
 
 const (
@@ -195,6 +199,7 @@ is performed. Note, when enabled, gRPC will also be automatically enabled.
 
 	// add support for all CometBFT-specific command line options
 	cmtcmd.AddNodeFlags(cmd)
+	rollconf.AddFlags(cmd)
 	return cmd
 }
 
@@ -305,28 +310,60 @@ func startInProcess(svrCtx *Context, clientCtx client.Context, appCreator types.
 
 		return appGenesis.ToGenesisDoc()
 	}
+	genDoc, err := genDocProvider()
+	if err != nil {
+		return err
+	}
 
 	var (
 		tmNode   *node.Node
-		gRPCOnly = svrCtx.Viper.GetBool(flagGRPCOnly)
+		server   *rollrpc.Server
+		gRPCOnly = ctx.Viper.GetBool(flagGRPCOnly)
 	)
 
 	if gRPCOnly {
 		svrCtx.Logger.Info("starting node in gRPC only mode; CometBFT is disabled")
 		config.GRPC.Enable = true
 	} else {
-		svrCtx.Logger.Info("starting node with ABCI CometBFT in-process")
+		ctx.Logger.Info("starting node with Rollkit in-process")
 
-		tmNode, err = node.NewNode(
-			cfg,
-			pvm.LoadOrGenFilePV(cfg.PrivValidatorKeyFile(), cfg.PrivValidatorStateFile()),
-			nodeKey,
-			proxy.NewLocalClientCreator(app),
-			genDocProvider,
-			node.DefaultDBProvider,
-			node.DefaultMetricsProvider(cfg.Instrumentation),
-			servercmtlog.CometZeroLogWrapper{Logger: svrCtx.Logger},
+		pval := pvm.LoadOrGenFilePV(cfg.PrivValidatorKeyFile(), cfg.PrivValidatorStateFile())
+		// keys in Rollkit format
+		p2pKey, err := rollconv.GetNodeKey(nodeKey)
+		if err != nil {
+			return err
+		}
+		signingKey, err := rollconv.GetNodeKey(&p2p.NodeKey{PrivKey: pval.Key.PrivKey})
+		if err != nil {
+			return err
+		}
+
+		nodeConfig := rollconf.NodeConfig{}
+		err = nodeConfig.GetViperConfig(ctx.Viper)
+		if err != nil {
+			return err
+		}
+		rollconv.GetNodeConfig(&nodeConfig, cfg)
+		err = rollconv.TranslateAddresses(&nodeConfig)
+		if err != nil {
+			return err
+		}
+
+		tmNode, err := rollnode.NewNode(
+			context.Background(),
+			nodeConfig,
+			p2pKey,
+			signingKey,
+			abciclient.NewLocalClient(nil, app),
+			genDoc,
+			ctx.Logger,
 		)
+		if err != nil {
+			return err
+		}
+
+		server := rollrpc.NewServer(tmNode, cfg.RPC, ctx.Logger)
+		err = server.Start()
 		if err != nil {
 			return err
 		}
@@ -340,9 +377,9 @@ func startInProcess(svrCtx *Context, clientCtx client.Context, appCreator types.
 	// service if API or gRPC is enabled, and avoid doing so in the general
 	// case, because it spawns a new local CometBFT RPC client.
 	if (config.API.Enable || config.GRPC.Enable) && tmNode != nil {
-		// Re-assign for making the client available below do not use := to avoid
-		// shadowing the clientCtx variable.
-		clientCtx = clientCtx.WithClient(local.New(tmNode))
+		// re-assign for making the client available below
+		// do not use := to avoid shadowing clientCtx
+		clientCtx = clientCtx.WithClient(server.Client())
 
 		app.RegisterTxService(clientCtx)
 		app.RegisterTendermintService(clientCtx)
@@ -413,10 +450,6 @@ func startInProcess(svrCtx *Context, clientCtx client.Context, appCreator types.
 	}
 
 	if config.API.Enable {
-		genDoc, err := genDocProvider()
-		if err != nil {
-			return err
-		}
 
 		clientCtx := clientCtx.WithHomeDir(home).WithChainID(genDoc.ChainID)
 

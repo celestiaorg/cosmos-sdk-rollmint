@@ -15,12 +15,18 @@ import (
 	"testing"
 	"time"
 
+	dbm "github.com/cometbft/cometbft-db"
+	"github.com/spf13/cobra"
+	"google.golang.org/grpc"
+
+	"github.com/cosmos/cosmos-sdk/testutil/configurator"
+	"github.com/cosmos/cosmos-sdk/testutil/testdata"
+
 	"cosmossdk.io/depinject"
 	"cosmossdk.io/log"
 	sdkmath "cosmossdk.io/math"
 	"cosmossdk.io/math/unsafe"
 	pruningtypes "cosmossdk.io/store/pruning/types"
-	"github.com/cometbft/cometbft/node"
 	cmtclient "github.com/cometbft/cometbft/rpc/client"
 	dbm "github.com/cosmos/cosmos-db"
 	"github.com/spf13/cobra"
@@ -56,6 +62,8 @@ import (
 	_ "github.com/cosmos/cosmos-sdk/x/params"  // import params as a blank
 	_ "github.com/cosmos/cosmos-sdk/x/staking" // import staking as a blank
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+
+	rollnode "github.com/rollkit/rollkit/node"
 )
 
 // package-wide network lock to only allow one test network at a time
@@ -260,7 +268,7 @@ type (
 		ValAddress sdk.ValAddress
 		RPCClient  cmtclient.Client
 
-		tmNode   *node.Node
+		tmNode   rollnode.Node
 		api      *api.Server
 		grpc     *grpc.Server
 		grpcWeb  *http.Server
@@ -735,17 +743,19 @@ func (n *Network) Cleanup() {
 	n.Logger.Log("cleaning up test network...")
 
 	for _, v := range n.Validators {
-		// cancel the validator's context which will signal to the gRPC and API
-		// goroutines that they should gracefully exit.
-		v.cancelFn()
-
-		if err := v.errGroup.Wait(); err != nil {
-			n.Logger.Log("unexpected error waiting for validator gRPC and API processes to exit", "err", err)
+		// TODO(tzdybal): add IsRunning and Stop methods to Node interface
+		if v.tmNode != nil && v.tmNode.(*rollnode.FullNode).IsRunning() {
+			_ = v.tmNode.(*rollnode.FullNode).Stop()
 		}
 
-		if v.tmNode != nil && v.tmNode.IsRunning() {
-			if err := v.tmNode.Stop(); err != nil {
-				n.Logger.Log("failed to stop validator CometBFT node", "err", err)
+		if v.api != nil {
+			_ = v.api.Close()
+		}
+
+		if v.grpc != nil {
+			v.grpc.Stop()
+			if v.grpcWeb != nil {
+				_ = v.grpcWeb.Close()
 			}
 		}
 
