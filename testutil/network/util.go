@@ -17,6 +17,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/server/api"
 	servergrpc "github.com/cosmos/cosmos-sdk/server/grpc"
+	servercmtlog "github.com/cosmos/cosmos-sdk/server/log"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	"github.com/cosmos/cosmos-sdk/x/genutil"
@@ -42,7 +43,7 @@ func startInProcess(cfg Config, val *Validator) error {
 		return err
 	}
 
-	pval := pvm.LoadOrGenFilePV(tmCfg.PrivValidatorKeyFile(), tmCfg.PrivValidatorStateFile())
+	pval := pvm.LoadOrGenFilePV(cmtCfg.PrivValidatorKeyFile(), cmtCfg.PrivValidatorStateFile())
 	// keys in Rollkit format
 	p2pKey, err := rollconv.GetNodeKey(nodeKey)
 	if err != nil {
@@ -54,7 +55,7 @@ func startInProcess(cfg Config, val *Validator) error {
 	}
 
 	app := cfg.AppConstructor(*val)
-	appGenesisProvider := func() (*cmttypes.GenesisDoc, error) {
+	genDocProvider := func() (*cmttypes.GenesisDoc, error) {
 		appGenesis, err := genutiltypes.AppGenesisFromFile(cmtCfg.GenesisFile())
 		if err != nil {
 			return nil, err
@@ -75,7 +76,7 @@ func startInProcess(cfg Config, val *Validator) error {
 	if err != nil {
 		return err
 	}
-	rollconv.GetNodeConfig(&nodeConfig, tmCfg)
+	rollconv.GetNodeConfig(&nodeConfig, cmtCfg)
 	err = rollconv.TranslateAddresses(&nodeConfig)
 	if err != nil {
 		return err
@@ -87,7 +88,7 @@ func startInProcess(cfg Config, val *Validator) error {
 		signingKey,
 		abciclient.NewLocalClient(nil, app),
 		genDoc,
-		logger,
+		servercmtlog.CometZeroLogWrapper{Logger: val.Ctx.Logger},
 	)
 	if err != nil {
 		return err
@@ -98,7 +99,7 @@ func startInProcess(cfg Config, val *Validator) error {
 	}
 
 	if val.RPCAddress != "" {
-		server := rollrpc.NewServer(val.tmNode, tmCfg.RPC, logger)
+		server := rollrpc.NewServer(val.tmNode, cmtCfg.RPC, servercmtlog.CometZeroLogWrapper{Logger: val.Ctx.Logger})
 		err = server.Start()
 		if err != nil {
 			return err

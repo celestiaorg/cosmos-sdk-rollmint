@@ -318,14 +318,14 @@ func startInProcess(svrCtx *Context, clientCtx client.Context, appCreator types.
 	var (
 		tmNode   *node.Node
 		server   *rollrpc.Server
-		gRPCOnly = ctx.Viper.GetBool(flagGRPCOnly)
+		gRPCOnly = svrCtx.Viper.GetBool(flagGRPCOnly)
 	)
 
 	if gRPCOnly {
 		svrCtx.Logger.Info("starting node in gRPC only mode; CometBFT is disabled")
 		config.GRPC.Enable = true
 	} else {
-		ctx.Logger.Info("starting node with Rollkit in-process")
+		svrCtx.Logger.Info("starting node with Rollkit in-process")
 
 		pval := pvm.LoadOrGenFilePV(cfg.PrivValidatorKeyFile(), cfg.PrivValidatorStateFile())
 		// keys in Rollkit format
@@ -339,7 +339,7 @@ func startInProcess(svrCtx *Context, clientCtx client.Context, appCreator types.
 		}
 
 		nodeConfig := rollconf.NodeConfig{}
-		err = nodeConfig.GetViperConfig(ctx.Viper)
+		err = nodeConfig.GetViperConfig(svrCtx.Viper)
 		if err != nil {
 			return err
 		}
@@ -356,13 +356,13 @@ func startInProcess(svrCtx *Context, clientCtx client.Context, appCreator types.
 			signingKey,
 			abciclient.NewLocalClient(nil, app),
 			genDoc,
-			ctx.Logger,
+			servercmtlog.CometZeroLogWrapper{Logger: svrCtx.Logger},
 		)
 		if err != nil {
 			return err
 		}
 
-		server := rollrpc.NewServer(tmNode, cfg.RPC, ctx.Logger)
+		server := rollrpc.NewServer(tmNode, cfg.RPC, servercmtlog.CometZeroLogWrapper{Logger: svrCtx.Logger})
 		err = server.Start()
 		if err != nil {
 			return err
