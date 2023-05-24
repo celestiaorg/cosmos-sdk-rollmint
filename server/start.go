@@ -13,6 +13,11 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 
 	"github.com/spf13/cobra"
+	"github.com/tendermint/tendermint/abci/server"
+	tcmd "github.com/tendermint/tendermint/cmd/cometbft/commands"
+	tmos "github.com/tendermint/tendermint/libs/os"
+	"github.com/tendermint/tendermint/node"
+	"github.com/tendermint/tendermint/p2p"
 	"google.golang.org/grpc"
 
 	"github.com/cosmos/cosmos-sdk/client"
@@ -24,12 +29,7 @@ import (
 	crgserver "github.com/cosmos/cosmos-sdk/server/rosetta/lib/server"
 	"github.com/cosmos/cosmos-sdk/server/types"
 	storetypes "github.com/cosmos/cosmos-sdk/store/types"
-	abciclient "github.com/tendermint/tendermint/abci/client"
-	"github.com/tendermint/tendermint/abci/server"
-	tcmd "github.com/tendermint/tendermint/cmd/tendermint/commands"
-	tmos "github.com/tendermint/tendermint/libs/os"
-	"github.com/tendermint/tendermint/node"
-	"github.com/tendermint/tendermint/p2p"
+	proxy "github.com/tendermint/tendermint/proxy"
 
 	rollconf "github.com/rollkit/rollkit/config"
 	rollconv "github.com/rollkit/rollkit/conv"
@@ -52,14 +52,14 @@ const (
 	FlagTrace              = "trace"
 	FlagInvCheckPeriod     = "inv-check-period"
 
-	FlagPruning           = "pruning"
-	FlagPruningKeepRecent = "pruning-keep-recent"
-	FlagPruningKeepEvery  = "pruning-keep-every"
-	FlagPruningInterval   = "pruning-interval"
-	FlagIndexEvents       = "index-events"
-	FlagMinRetainBlocks   = "min-retain-blocks"
-	FlagIAVLCacheSize     = "iavl-cache-size"
-	FlagIAVLFastNode      = "iavl-disable-fastnode"
+	FlagPruning             = "pruning"
+	FlagPruningKeepRecent   = "pruning-keep-recent"
+	FlagPruningKeepEvery    = "pruning-keep-every"
+	FlagPruningInterval     = "pruning-interval"
+	FlagIndexEvents         = "index-events"
+	FlagMinRetainBlocks     = "min-retain-blocks"
+	FlagIAVLCacheSize       = "iavl-cache-size"
+	FlagDisableIAVLFastNode = "iavl-disable-fastnode"
 
 	// state sync-related flags
 	FlagStateSyncSnapshotInterval   = "state-sync.snapshot-interval"
@@ -170,7 +170,7 @@ is performed. Note, when enabled, gRPC will also be automatically enabled.
 	cmd.Flags().Uint64(FlagStateSyncSnapshotInterval, 0, "State sync snapshot interval")
 	cmd.Flags().Uint32(FlagStateSyncSnapshotKeepRecent, 2, "State sync snapshot to keep")
 
-	cmd.Flags().Bool(FlagIAVLFastNode, true, "Enable fast node for IAVL tree")
+	cmd.Flags().Bool(FlagDisableIAVLFastNode, true, "Disable fast node for IAVL tree")
 
 	// add support for all Tendermint-specific command line options
 	tcmd.AddNodeFlags(cmd)
@@ -315,7 +315,7 @@ func startInProcess(ctx *Context, clientCtx client.Context, appCreator types.App
 			nodeConfig,
 			p2pKey,
 			signingKey,
-			abciclient.NewLocalClient(nil, app),
+			proxy.NewLocalClientCreator(app),
 			genesis,
 			ctx.Logger,
 		)
@@ -339,8 +339,11 @@ func startInProcess(ctx *Context, clientCtx client.Context, appCreator types.App
 	// Add the tx service to the gRPC router. We only need to register this
 	// service if API or gRPC is enabled, and avoid doing so in the general
 	// case, because it spawns a new local tendermint RPC client.
-	if config.API.Enable || config.GRPC.Enable {
+	if (config.API.Enable || config.GRPC.Enable) && tmNode != nil {
+		// re-assign for making the client available below
+		// do not use := to avoid shadowing clientCtx
 		clientCtx = clientCtx.WithClient(server.Client())
+
 		app.RegisterTxService(clientCtx)
 		app.RegisterTendermintService(clientCtx)
 

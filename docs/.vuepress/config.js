@@ -33,9 +33,9 @@ module.exports = {
     editLinks: true,
     label: "sdk",
     algolia: {
-      id: "BH4D9OD16A",
-      key: "ac317234e6a42074175369b2f42e9754",
-      index: "cosmos-sdk"
+      id: "QLS2QSP47E",
+      key: "4d9feeb481e3cfef8f91bbc63e090042",
+      index: "cosmos_network_vue"
     },
     versions: [
       {
