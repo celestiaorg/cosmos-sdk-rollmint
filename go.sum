@@ -181,12 +181,12 @@ github.com/buger/jsonparser v0.0.0-20181115193947-bf1c66bbce23/go.mod h1:bbYlZJ7
 github.com/bwesterb/go-ristretto v1.2.0/go.mod h1:fUIoIZaG73pV5biE2Blr2xEzDoMj7NFEuV9ekS419A0=
 github.com/c-bata/go-prompt v0.2.2/go.mod h1:VzqtzE2ksDBcdln8G7mk2RX9QyGjH+OVqOCSiVIqS34=
 github.com/casbin/casbin/v2 v2.1.2/go.mod h1:YcPU1XXisHhLzuxH9coDNf2FbKpjGlbCg3n9yuLkIJQ=
-github.com/celestiaorg/go-cnc v0.3.0 h1:eAVPNHGpx+2sBO7NZyQ1+VW8rzf6W4FQDlSq6aqSTsM=
-github.com/celestiaorg/go-cnc v0.3.0/go.mod h1:zYzvHudSd1iNPuHBMyvZ1YvWou5aT9JXgtch9Tkaf70=
+github.com/celestiaorg/go-cnc v0.4.1 h1:7fz8Y8HKKxE2dCp2m9Qlm+NoROxJWGCiKtcvaYp8iM8=
+github.com/celestiaorg/go-cnc v0.4.1/go.mod h1:zYzvHudSd1iNPuHBMyvZ1YvWou5aT9JXgtch9Tkaf70=
 github.com/celestiaorg/go-fraud v0.1.0 h1:v6mZvlmf2J5ELZfPnrtmmOvKbaYIUs/erDWPO8NbZyY=
 github.com/celestiaorg/go-fraud v0.1.0/go.mod h1:yoNM35cKMAkt5Mi/Qx3Wi9bnPilLi8n6RpHZVglTUDs=
-github.com/celestiaorg/go-header v0.2.7 h1:r0X9Dl7lqBkQpwG3ekQHC61n/QdwO6epuIxDkQ4YX4o=
-github.com/celestiaorg/go-header v0.2.7/go.mod h1:i9OpY70+PJ1xPw1IgMfF0Pk6vBD6VWPmjY3bgubJBcU=
+github.com/celestiaorg/go-header v0.2.8 h1:NS6fOzfRoGqQF3RrstSjAxLArWyJWob+25T4GFCQj30=
+github.com/celestiaorg/go-header v0.2.8/go.mod h1:i9OpY70+PJ1xPw1IgMfF0Pk6vBD6VWPmjY3bgubJBcU=
 github.com/celestiaorg/go-libp2p-messenger v0.2.0 h1:/0MuPDcFamQMbw9xTZ73yImqgTO3jHV7wKHvWD/Irao=
 github.com/celestiaorg/go-libp2p-messenger v0.2.0/go.mod h1:s9PIhMi7ApOauIsfBcQwbr7m+HBzmVfDIS+QLdgzDSo=
 github.com/celestiaorg/merkletree v0.0.0-20210714075610-a84dc3ddbbe4 h1:CJdIpo8n5MFP2MwK0gSRcOVlDlFdQJO1p+FqdxYzmvc=
@@ -1321,8 +1321,8 @@ github.com/rollkit/celestia-openrpc v0.0.0-20230531022214-505ff801e818 h1:L7WGAG
 github.com/rollkit/celestia-openrpc v0.0.0-20230531022214-505ff801e818/go.mod h1:eDBRyA4NoVLTGRXUxMb50/sW456UIptRAqixUqocg3Q=
 github.com/rollkit/cometbft v0.0.0-20230524013001-2968c8b8b121 h1:kMzxCUzXcdk318N/G2E7U0GXrq6yqczjFRs2RZvIUeE=
 github.com/rollkit/cometbft v0.0.0-20230524013001-2968c8b8b121/go.mod h1:Xc6G7GTlHAjeH3l5H8WibF/YrcCR6iDgAGrXVWkMwiU=
-github.com/rollkit/rollkit v0.8.1 h1:VVr3gTY/wW2/B7aSkr9W/qP+e+2Ol3IcmKDLzoOpucE=
-github.com/rollkit/rollkit v0.8.1/go.mod h1:rD9Nqkf9DdUd0xRsDFTp/p8v/JMkCuMZhgRKRHh/tNc=
+github.com/rollkit/rollkit v0.8.2-rc0 h1:xQkthJH/TPTWSknwd4SbS1GFTh1A9LX3vdJRAZt94NY=
+github.com/rollkit/rollkit v0.8.2-rc0/go.mod h1:w+8e22wMyb03FPJbBbx2APxScSxet0YyXHJUx0iWpag=
 github.com/rs/cors v1.7.0/go.mod h1:gFx+x8UowdsKA9AchylcLynDq+nNFfI8FkUZdN/jGCU=
 github.com/rs/cors v1.9.0 h1:l9HGsTsHJcvW14Nk7J9KFz8bzeAWXn3CG6bgt7LsrAE=
 github.com/rs/cors v1.9.0/go.mod h1:XyqrcTp5zjWr1wsJ8PIRZssZ8b/WMcMf71DJnit4EMU=
