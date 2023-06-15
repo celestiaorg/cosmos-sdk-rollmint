@@ -85,8 +85,7 @@ func (w cometABCIWrapper) EndBlock(_ context.Context, req *abci.RequestEndBlock)
 }
 
 func (w cometABCIWrapper) GetAppHash(_ context.Context, req *abci.RequestGetAppHash) (*abci.ResponseGetAppHash, error) {
-	//TODO implement me
-	panic("implement me")
+	return w.app.GetAppHash(req)
 }
 
 func (w cometABCIWrapper) GenerateFraudProof(_ context.Context, req *abci.RequestGenerateFraudProof) (*abci.ResponseGenerateFraudProof, error) {
