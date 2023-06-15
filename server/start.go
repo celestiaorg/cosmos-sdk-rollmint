@@ -14,11 +14,9 @@ import (
 	"github.com/cometbft/cometbft/abci/server"
 	cmtcmd "github.com/cometbft/cometbft/cmd/cometbft/commands"
 	cmtcfg "github.com/cometbft/cometbft/config"
-	"github.com/cometbft/cometbft/node"
 	"github.com/cometbft/cometbft/p2p"
 	pvm "github.com/cometbft/cometbft/privval"
 	"github.com/cometbft/cometbft/proxy"
-	"github.com/cometbft/cometbft/rpc/client/local"
 	cmttypes "github.com/cometbft/cometbft/types"
 	dbm "github.com/cosmos/cosmos-db"
 	"github.com/spf13/cobra"
@@ -39,6 +37,11 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/mempool"
 	"github.com/cosmos/cosmos-sdk/version"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
+
+	rollconf "github.com/rollkit/rollkit/config"
+	rollconv "github.com/rollkit/rollkit/conv"
+	rollnode "github.com/rollkit/rollkit/node"
+	rollrpc "github.com/rollkit/rollkit/rpc"
 )
 
 const (
@@ -101,13 +104,13 @@ type StartCmdOptions struct {
 }
 
 // StartCmd runs the service passed in, either stand-alone or in-process with
-// CometBFT.
+// Rollkit.
 func StartCmd(appCreator types.AppCreator, defaultNodeHome string) *cobra.Command {
 	return StartCmdWithOptions(appCreator, defaultNodeHome, StartCmdOptions{})
 }
 
 // StartCmdWithOptions runs the service passed in, either stand-alone or in-process with
-// CometBFT.
+// Rollkit.
 func StartCmdWithOptions(appCreator types.AppCreator, defaultNodeHome string, opts StartCmdOptions) *cobra.Command {
 	if opts.DBOpener == nil {
 		opts.DBOpener = openDB
@@ -116,8 +119,8 @@ func StartCmdWithOptions(appCreator types.AppCreator, defaultNodeHome string, op
 	cmd := &cobra.Command{
 		Use:   "start",
 		Short: "Run the full node",
-		Long: `Run the full node application with CometBFT in or out of process. By
-default, the application will run with CometBFT in process.
+		Long: `Run the full node application with Rollkit in or out of process. By
+default, the application will run with Rollkit in process.
 
 Pruning options can be provided via the '--pruning' flag or alternatively with '--pruning-keep-recent', and
 'pruning-interval' together.
@@ -139,7 +142,7 @@ For profiling and benchmarking purposes, CPU profiling can be enabled via the '-
 which accepts a path for the resulting pprof file.
 
 The node may be started in a 'query only' mode where only the gRPC and JSON HTTP
-API services are enabled via the 'grpc-only' flag. In this mode, CometBFT is
+API services are enabled via the 'grpc-only' flag. In this mode, Rollkit is
 bypassed and can be used when legacy queries are needed after an on-chain upgrade
 is performed. Note, when enabled, gRPC will also be automatically enabled.
 `,
@@ -164,7 +167,7 @@ is performed. Note, when enabled, gRPC will also be automatically enabled.
 
 			withCMT, _ := cmd.Flags().GetBool(flagWithComet)
 			if !withCMT {
-				serverCtx.Logger.Info("starting ABCI without CometBFT")
+				serverCtx.Logger.Info("starting ABCI without Rollkit")
 			}
 
 			return wrapCPUProfile(serverCtx, func() error {
@@ -174,7 +177,7 @@ is performed. Note, when enabled, gRPC will also be automatically enabled.
 	}
 
 	cmd.Flags().String(flags.FlagHome, defaultNodeHome, "The application home directory")
-	cmd.Flags().Bool(flagWithComet, true, "Run abci app embedded in-process with CometBFT")
+	cmd.Flags().Bool(flagWithComet, true, "Run abci app embedded in-process with Rollkit")
 	cmd.Flags().String(flagAddress, "tcp://0.0.0.0:26658", "Listen address")
 	cmd.Flags().String(flagTransport, "socket", "Transport protocol: socket, grpc")
 	cmd.Flags().String(flagTraceStore, "", "Enable KVStore tracing to an output file")
@@ -189,16 +192,16 @@ is performed. Note, when enabled, gRPC will also be automatically enabled.
 	cmd.Flags().Uint64(FlagPruningKeepRecent, 0, "Number of recent heights to keep on disk (ignored if pruning is not 'custom')")
 	cmd.Flags().Uint64(FlagPruningInterval, 0, "Height interval at which pruned heights are removed from disk (ignored if pruning is not 'custom')")
 	cmd.Flags().Uint(FlagInvCheckPeriod, 0, "Assert registered invariants every N blocks")
-	cmd.Flags().Uint64(FlagMinRetainBlocks, 0, "Minimum block height offset during ABCI commit to prune CometBFT blocks")
+	cmd.Flags().Uint64(FlagMinRetainBlocks, 0, "Minimum block height offset during ABCI commit to prune Rollkit blocks")
 	cmd.Flags().Bool(FlagAPIEnable, false, "Define if the API server should be enabled")
 	cmd.Flags().Bool(FlagAPISwagger, false, "Define if swagger documentation should automatically be registered (Note: the API must also be enabled)")
 	cmd.Flags().String(FlagAPIAddress, serverconfig.DefaultAPIAddress, "the API server address to listen on")
 	cmd.Flags().Uint(FlagAPIMaxOpenConnections, 1000, "Define the number of maximum open connections")
-	cmd.Flags().Uint(FlagRPCReadTimeout, 10, "Define the CometBFT RPC read timeout (in seconds)")
-	cmd.Flags().Uint(FlagRPCWriteTimeout, 0, "Define the CometBFT RPC write timeout (in seconds)")
-	cmd.Flags().Uint(FlagRPCMaxBodyBytes, 1000000, "Define the CometBFT maximum request body (in bytes)")
+	cmd.Flags().Uint(FlagRPCReadTimeout, 10, "Define the Rollkit RPC read timeout (in seconds)")
+	cmd.Flags().Uint(FlagRPCWriteTimeout, 0, "Define the Rollkit RPC write timeout (in seconds)")
+	cmd.Flags().Uint(FlagRPCMaxBodyBytes, 1000000, "Define the Rollkit maximum request body (in bytes)")
 	cmd.Flags().Bool(FlagAPIEnableUnsafeCORS, false, "Define if CORS should be enabled (unsafe - use it at your own risk)")
-	cmd.Flags().Bool(flagGRPCOnly, false, "Start the node in gRPC query only mode (no CometBFT process is started)")
+	cmd.Flags().Bool(flagGRPCOnly, false, "Start the node in gRPC query only mode (no Rollkit process is started)")
 	cmd.Flags().Bool(flagGRPCEnable, true, "Define if the gRPC server should be enabled")
 	cmd.Flags().String(flagGRPCAddress, serverconfig.DefaultGRPCAddress, "the gRPC server address to listen on")
 	cmd.Flags().Bool(flagGRPCWebEnable, true, "Define if the gRPC-Web server should be enabled. (Note: gRPC must also be enabled)")
@@ -218,6 +221,8 @@ is performed. Note, when enabled, gRPC will also be automatically enabled.
 
 	// add support for all CometBFT-specific command line options
 	cmtcmd.AddNodeFlags(cmd)
+	// add support for all Rollkit-specirfic command line options
+	rollconf.AddFlags(cmd)
 
 	if opts.AddFlags != nil {
 		opts.AddFlags(cmd)
@@ -290,11 +295,11 @@ func startInProcess(svrCtx *Context, svrCfg serverconfig.Config, clientCtx clien
 
 	if gRPCOnly {
 		// TODO: Generalize logic so that gRPC only is really in startStandAlone
-		svrCtx.Logger.Info("starting node in gRPC only mode; CometBFT is disabled")
+		svrCtx.Logger.Info("starting node in gRPC only mode; Rollkit is disabled")
 		svrCfg.GRPC.Enable = true
 	} else {
-		svrCtx.Logger.Info("starting node with ABCI CometBFT in-process")
-		tmNode, cleanupFn, err := startCmtNode(cmtCfg, app, svrCtx)
+		svrCtx.Logger.Info("starting node with ABCI Rollkit in-process")
+		server, cleanupFn, err := startCmtNode(cmtCfg, app, svrCtx)
 		if err != nil {
 			return err
 		}
@@ -302,11 +307,11 @@ func startInProcess(svrCtx *Context, svrCfg serverconfig.Config, clientCtx clien
 
 		// Add the tx service to the gRPC router. We only need to register this
 		// service if API or gRPC is enabled, and avoid doing so in the general
-		// case, because it spawns a new local CometBFT RPC client.
+		// case, because it spawns a new local Rollkit RPC client.
 		if svrCfg.API.Enable || svrCfg.GRPC.Enable {
 			// Re-assign for making the client available below do not use := to avoid
 			// shadowing the clientCtx variable.
-			clientCtx = clientCtx.WithClient(local.New(tmNode))
+			clientCtx = clientCtx.WithClient(server.Client())
 
 			app.RegisterTxService(clientCtx)
 			app.RegisterTendermintService(clientCtx)
@@ -342,29 +347,67 @@ func startCmtNode(
 	cfg *cmtcfg.Config,
 	app types.Application,
 	svrCtx *Context,
-) (tmNode *node.Node, cleanupFn func(), err error) {
+) (server *rollrpc.Server, cleanupFn func(), err error) {
 	nodeKey, err := p2p.LoadOrGenNodeKey(cfg.NodeKeyFile())
 	if err != nil {
 		return nil, cleanupFn, err
 	}
 
+	svrCtx.Logger.Info("starting node with Rollkit in-process")
+
 	cmtApp := NewCometABCIWrapper(app)
-	tmNode, err = node.NewNode(
-		cfg,
-		pvm.LoadOrGenFilePV(cfg.PrivValidatorKeyFile(), cfg.PrivValidatorStateFile()),
-		nodeKey,
+
+	pval := pvm.LoadOrGenFilePV(cfg.PrivValidatorKeyFile(), cfg.PrivValidatorStateFile())
+
+	//keys in Rollkit format
+	p2pKey, err := rollconv.GetNodeKey(nodeKey)
+	if err != nil {
+		return nil, cleanupFn, err
+	}
+
+	signingKey, err := rollconv.GetNodeKey(&p2p.NodeKey{PrivKey: pval.Key.PrivKey})
+	if err != nil {
+		return nil, cleanupFn, err
+	}
+
+	nodeConfig := rollconf.NodeConfig{}
+	err = nodeConfig.GetViperConfig(svrCtx.Viper)
+	if err != nil {
+		return nil, cleanupFn, err
+	}
+	rollconv.GetNodeConfig(&nodeConfig, cfg)
+	err = rollconv.TranslateAddresses(&nodeConfig)
+	if err != nil {
+		return nil, cleanupFn, err
+	}
+
+	genDoc, err := getGenDocProvider(cfg)()
+	if err != nil {
+		return nil, cleanupFn, err
+	}
+
+	tmNode, err := rollnode.NewNode(
+		context.Background(),
+		nodeConfig,
+		p2pKey,
+		signingKey,
 		proxy.NewLocalClientCreator(cmtApp),
-		getGenDocProvider(cfg),
-		cmtcfg.DefaultDBProvider,
-		node.DefaultMetricsProvider(cfg.Instrumentation),
+		genDoc,
 		servercmtlog.CometLoggerWrapper{Logger: svrCtx.Logger},
 	)
+
 	if err != nil {
-		return tmNode, cleanupFn, err
+		return nil, cleanupFn, err
+	}
+
+	server = rollrpc.NewServer(tmNode, cfg.RPC, servercmtlog.CometLoggerWrapper{Logger: svrCtx.Logger})
+	err = server.Start()
+	if err != nil {
+		return nil, cleanupFn, err
 	}
 
 	if err := tmNode.Start(); err != nil {
-		return tmNode, cleanupFn, err
+		return nil, cleanupFn, err
 	}
 
 	cleanupFn = func() {
@@ -374,7 +417,7 @@ func startCmtNode(
 		}
 	}
 
-	return tmNode, cleanupFn, nil
+	return server, cleanupFn, nil
 }
 
 func getAndValidateConfig(svrCtx *Context) (serverconfig.Config, error) {
