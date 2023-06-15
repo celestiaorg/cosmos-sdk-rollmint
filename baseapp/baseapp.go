@@ -1074,8 +1074,7 @@ func (app *BaseApp) Close() error {
 }
 
 func (app *BaseApp) GetAppHash(hash *abci.RequestGetAppHash) (*abci.ResponseGetAppHash, error) {
-	//TODO implement me
-	panic("implement me")
+	return &abci.ResponseGetAppHash{AppHash: app.LastCommitID().Hash}, nil
 }
 
 func (app *BaseApp) GenerateFraudProof(proof *abci.RequestGenerateFraudProof) (*abci.ResponseGenerateFraudProof, error) {
