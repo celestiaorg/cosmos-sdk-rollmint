@@ -47,7 +47,7 @@ require (
 	github.com/mattn/go-isatty v0.0.19
 	github.com/prometheus/client_golang v1.15.1
 	github.com/prometheus/common v0.44.0
-	github.com/rollkit/rollkit v0.8.2-0.20230616212804-5e2a12d38cf3
+	github.com/rollkit/rollkit v0.8.2-0.20230621160933-e554ea2c2a8a
 	github.com/rs/zerolog v1.29.1
 	github.com/spf13/cast v1.5.1
 	github.com/spf13/cobra v1.7.0

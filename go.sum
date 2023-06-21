@@ -1591,6 +1591,8 @@ github.com/rollkit/cometbft v0.0.0-20230614163111-d6a8d2c98cc0 h1:VfgqV/mic4DsrC
 github.com/rollkit/cometbft v0.0.0-20230614163111-d6a8d2c98cc0/go.mod h1:5Jz0Z8YsHSf0ZaAqGvi/ifioSdVFPtEGrm8Y9T/993k=
 github.com/rollkit/rollkit v0.8.2-0.20230616212804-5e2a12d38cf3 h1:XsPpRYBScFwv5y588NW6nmZmrzTTDYlEOHCpxDl1+ME=
 github.com/rollkit/rollkit v0.8.2-0.20230616212804-5e2a12d38cf3/go.mod h1:B/KOikuWDXu5JZLXwJsmraVDfwFg4yAsn4DuuHDg3Qw=
+github.com/rollkit/rollkit v0.8.2-0.20230621160933-e554ea2c2a8a h1:iKRXXiJNAQ3ZJ+gVueLSqHBlSktfoSQM1eLipuUAaG0=
+github.com/rollkit/rollkit v0.8.2-0.20230621160933-e554ea2c2a8a/go.mod h1:B/KOikuWDXu5JZLXwJsmraVDfwFg4yAsn4DuuHDg3Qw=
 github.com/rs/cors v1.7.0/go.mod h1:gFx+x8UowdsKA9AchylcLynDq+nNFfI8FkUZdN/jGCU=
 github.com/rs/cors v1.8.2/go.mod h1:XyqrcTp5zjWr1wsJ8PIRZssZ8b/WMcMf71DJnit4EMU=
 github.com/rs/cors v1.9.0 h1:l9HGsTsHJcvW14Nk7J9KFz8bzeAWXn3CG6bgt7LsrAE=
