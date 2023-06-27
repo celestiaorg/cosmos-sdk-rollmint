@@ -67,7 +67,7 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/celestiaorg/go-cnc v0.3.0 // indirect
 	github.com/celestiaorg/go-fraud v0.1.0 // indirect
-	github.com/celestiaorg/go-header v0.2.7 // indirect
+	github.com/celestiaorg/go-header v0.2.8 // indirect
 	github.com/celestiaorg/go-libp2p-messenger v0.2.0 // indirect
 	github.com/celestiaorg/merkletree v0.0.0-20210714075610-a84dc3ddbbe4 // indirect
 	github.com/celestiaorg/nmt v0.15.0 // indirect
