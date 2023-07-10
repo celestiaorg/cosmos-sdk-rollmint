@@ -3,6 +3,7 @@ package server
 // DONTCOVER
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net"
@@ -17,7 +18,6 @@ import (
 	"github.com/cometbft/cometbft/p2p"
 	pvm "github.com/cometbft/cometbft/privval"
 	"github.com/cometbft/cometbft/proxy"
-	"github.com/cometbft/cometbft/rpc/client/local"
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -35,6 +35,11 @@ import (
 	"github.com/cosmos/cosmos-sdk/telemetry"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/mempool"
+
+	rollconf "github.com/rollkit/rollkit/config"
+	rollconv "github.com/rollkit/rollkit/conv"
+	rollnode "github.com/rollkit/rollkit/node"
+	rollrpc "github.com/rollkit/rollkit/rpc"
 )
 
 const (
@@ -203,6 +208,7 @@ is performed. Note, when enabled, gRPC will also be automatically enabled.
 
 	// add support for all Tendermint-specific command line options
 	tcmd.AddNodeFlags(cmd)
+	rollconf.AddFlags(cmd)
 	return cmd
 }
 
@@ -305,9 +311,14 @@ func startInProcess(ctx *Context, clientCtx client.Context, appCreator types.App
 		return err
 	}
 	genDocProvider := node.DefaultGenesisDocProviderFunc(cfg)
+	genDoc, err := genDocProvider()
+	if err != nil {
+		return err
+	}
 
 	var (
 		tmNode   *node.Node
+		server   *rollrpc.Server
 		gRPCOnly = ctx.Viper.GetBool(flagGRPCOnly)
 	)
 
@@ -315,18 +326,45 @@ func startInProcess(ctx *Context, clientCtx client.Context, appCreator types.App
 		ctx.Logger.Info("starting node in gRPC only mode; Tendermint is disabled")
 		config.GRPC.Enable = true
 	} else {
-		ctx.Logger.Info("starting node with ABCI Tendermint in-process")
+		ctx.Logger.Info("starting node with Rollkit in-process")
 
-		tmNode, err = node.NewNode(
-			cfg,
-			pvm.LoadOrGenFilePV(cfg.PrivValidatorKeyFile(), cfg.PrivValidatorStateFile()),
-			nodeKey,
+		pval := pvm.LoadOrGenFilePV(cfg.PrivValidatorKeyFile(), cfg.PrivValidatorStateFile())
+		// keys in Rollkit format
+		p2pKey, err := rollconv.GetNodeKey(nodeKey)
+		if err != nil {
+			return err
+		}
+		signingKey, err := rollconv.GetNodeKey(&p2p.NodeKey{PrivKey: pval.Key.PrivKey})
+		if err != nil {
+			return err
+		}
+
+		nodeConfig := rollconf.NodeConfig{}
+		err = nodeConfig.GetViperConfig(ctx.Viper)
+		if err != nil {
+			return err
+		}
+		rollconv.GetNodeConfig(&nodeConfig, cfg)
+		err = rollconv.TranslateAddresses(&nodeConfig)
+		if err != nil {
+			return err
+		}
+
+		tmNode, err := rollnode.NewNode(
+			context.Background(),
+			nodeConfig,
+			p2pKey,
+			signingKey,
 			proxy.NewLocalClientCreator(app),
-			genDocProvider,
-			node.DefaultDBProvider,
-			node.DefaultMetricsProvider(cfg.Instrumentation),
+			genDoc,
 			ctx.Logger,
 		)
+		if err != nil {
+			return err
+		}
+
+		server := rollrpc.NewServer(tmNode, cfg.RPC, ctx.Logger)
+		err = server.Start()
 		if err != nil {
 			return err
 		}
@@ -342,7 +380,7 @@ func startInProcess(ctx *Context, clientCtx client.Context, appCreator types.App
 	if (config.API.Enable || config.GRPC.Enable) && tmNode != nil {
 		// re-assign for making the client available below
 		// do not use := to avoid shadowing clientCtx
-		clientCtx = clientCtx.WithClient(local.New(tmNode))
+		clientCtx = clientCtx.WithClient(server.Client())
 
 		app.RegisterTxService(clientCtx)
 		app.RegisterTendermintService(clientCtx)
@@ -356,10 +394,6 @@ func startInProcess(ctx *Context, clientCtx client.Context, appCreator types.App
 
 	var apiSrv *api.Server
 	if config.API.Enable {
-		genDoc, err := genDocProvider()
-		if err != nil {
-			return err
-		}
 
 		clientCtx := clientCtx.WithHomeDir(home).WithChainID(genDoc.ChainID)
 
