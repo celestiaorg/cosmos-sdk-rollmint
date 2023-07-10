@@ -8,10 +8,10 @@ import (
 	"path/filepath"
 	"time"
 
-	abciclient "github.com/cometbft/cometbft/abci/client"
 	"github.com/cometbft/cometbft/node"
 	"github.com/cometbft/cometbft/p2p"
 	pvm "github.com/cometbft/cometbft/privval"
+	"github.com/cometbft/cometbft/proxy"
 	"github.com/cometbft/cometbft/types"
 	tmtime "github.com/cometbft/cometbft/types/time"
 
@@ -79,7 +79,7 @@ func startInProcess(cfg Config, val *Validator) error {
 		nodeConfig,
 		p2pKey,
 		signingKey,
-		abciclient.NewLocalClient(nil, app),
+		proxy.NewLocalClientCreator(app),
 		genDoc,
 		logger,
 	)

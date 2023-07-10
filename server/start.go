@@ -12,12 +12,12 @@ import (
 	"runtime/pprof"
 	"time"
 
-	abciclient "github.com/cometbft/cometbft/abci/client"
 	"github.com/cometbft/cometbft/abci/server"
 	tcmd "github.com/cometbft/cometbft/cmd/cometbft/commands"
 	"github.com/cometbft/cometbft/node"
 	"github.com/cometbft/cometbft/p2p"
 	pvm "github.com/cometbft/cometbft/privval"
+	"github.com/cometbft/cometbft/proxy"
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -355,7 +355,7 @@ func startInProcess(ctx *Context, clientCtx client.Context, appCreator types.App
 			nodeConfig,
 			p2pKey,
 			signingKey,
-			abciclient.NewLocalClient(nil, app),
+			proxy.NewLocalClientCreator(app),
 			genDoc,
 			ctx.Logger,
 		)
