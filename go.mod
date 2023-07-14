@@ -47,7 +47,7 @@ require (
 	github.com/mattn/go-isatty v0.0.19
 	github.com/prometheus/client_golang v1.16.0
 	github.com/prometheus/common v0.44.0
-	github.com/rollkit/rollkit v0.8.2-0.20230711133400-d6cc40550711
+	github.com/rollkit/rollkit v0.8.2-0.20230714162741-29ca23911928
 	github.com/rs/zerolog v1.29.1
 	github.com/spf13/cast v1.5.1
 	github.com/spf13/cobra v1.7.0
@@ -72,7 +72,6 @@ require (
 	github.com/DataDog/zstd v1.5.5 // indirect
 	github.com/benbjohnson/clock v1.3.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
-	github.com/btcsuite/btcd v0.22.1 // indirect
 	github.com/btcsuite/btcd/btcec/v2 v2.3.2 // indirect
 	github.com/bufbuild/protocompile v0.5.1 // indirect
 	github.com/celestiaorg/go-fraud v0.1.1 // indirect
@@ -221,8 +220,8 @@ require (
 	github.com/quic-go/webtransport-go v0.5.2 // indirect
 	github.com/raulk/go-watchdog v1.3.0 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
-	github.com/rogpeppe/go-internal v1.10.0 // indirect
-	github.com/rollkit/celestia-openrpc v0.1.0 // indirect
+	github.com/rogpeppe/go-internal v1.11.0 // indirect
+	github.com/rollkit/celestia-openrpc v0.1.1-0.20230714143644-7b1cc02f2d82 // indirect
 	github.com/rs/cors v1.9.0 // indirect
 	github.com/sasha-s/go-deadlock v0.3.1 // indirect
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
@@ -232,7 +231,6 @@ require (
 	github.com/subosito/gotenv v1.4.2 // indirect
 	github.com/syndtr/goleveldb v1.0.1-0.20220721030215-126854af5e6d // indirect
 	github.com/tecbot/gorocksdb v0.0.0-20191217155057-f0fad39f321c // indirect
-	github.com/tendermint/tendermint v0.35.9 // indirect
 	github.com/tidwall/btree v1.6.0 // indirect
 	github.com/whyrusleeping/go-keyspace v0.0.0-20160322163242-5b898ac5add1 // indirect
 	github.com/zondax/hid v0.9.1 // indirect
