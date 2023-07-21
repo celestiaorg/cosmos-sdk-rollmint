@@ -34,4 +34,10 @@ type ABCI interface {
 	OfferSnapshot(*abci.RequestOfferSnapshot) (*abci.ResponseOfferSnapshot, error)                // Offer a snapshot to the application
 	LoadSnapshotChunk(*abci.RequestLoadSnapshotChunk) (*abci.ResponseLoadSnapshotChunk, error)    // Load a snapshot chunk
 	ApplySnapshotChunk(*abci.RequestApplySnapshotChunk) (*abci.ResponseApplySnapshotChunk, error) // Apply a shapshot chunk
+
+	// Fraud proof stuff
+	GetAppHash(*abci.RequestGetAppHash) (*abci.ResponseGetAppHash, error)
+	GenerateFraudProof(*abci.RequestGenerateFraudProof) (*abci.ResponseGenerateFraudProof, error)
+	VerifyFraudProof(*abci.RequestVerifyFraudProof) (*abci.ResponseVerifyFraudProof, error)
+	//TODO implement me
 }
