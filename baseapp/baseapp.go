@@ -1068,17 +1068,3 @@ func (app *BaseApp) ProcessProposalVerifyTx(txBz []byte) (sdk.Tx, error) {
 func (app *BaseApp) Close() error {
 	return nil
 }
-
-func (app *BaseApp) GetAppHash(hash *abci.RequestGetAppHash) (*abci.ResponseGetAppHash, error) {
-	return &abci.ResponseGetAppHash{AppHash: app.LastCommitID().Hash}, nil
-}
-
-func (app *BaseApp) GenerateFraudProof(proof *abci.RequestGenerateFraudProof) (*abci.ResponseGenerateFraudProof, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (app *BaseApp) VerifyFraudProof(proof *abci.RequestVerifyFraudProof) (*abci.ResponseVerifyFraudProof, error) {
-	//TODO implement me
-	panic("implement me")
-}
