@@ -302,7 +302,7 @@ func startInProcess(svrCtx *Context, svrCfg serverconfig.Config, clientCtx clien
 		svrCfg.GRPC.Enable = true
 	} else {
 		svrCtx.Logger.Info("starting node with ABCI Rollkit in-process")
-		server, cleanupFn, err := startCmtNode(cmtCfg, app, svrCtx)
+		server, cleanupFn, err := startCmtNode(ctx, cmtCfg, app, svrCtx)
 		if err != nil {
 			return err
 		}
