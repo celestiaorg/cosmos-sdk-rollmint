@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"fmt"
 
 	abci "github.com/cometbft/cometbft/abci/types"
 
@@ -71,16 +70,4 @@ func (w cometABCIWrapper) LoadSnapshotChunk(_ context.Context, req *abci.Request
 
 func (w cometABCIWrapper) ApplySnapshotChunk(_ context.Context, req *abci.RequestApplySnapshotChunk) (*abci.ResponseApplySnapshotChunk, error) {
 	return w.app.ApplySnapshotChunk(req)
-}
-
-func (w cometABCIWrapper) BeginBlock(_ context.Context, req *abci.RequestBeginBlock) (*abci.ResponseBeginBlock, error) {
-	return nil, fmt.Errorf("BeginBlock no longer supported")
-}
-
-func (w cometABCIWrapper) DeliverTx(_ context.Context, req *abci.RequestDeliverTx) (*abci.ResponseDeliverTx, error) {
-	return nil, fmt.Errorf("DeliverTx no longer supported")
-}
-
-func (w cometABCIWrapper) EndBlock(_ context.Context, req *abci.RequestEndBlock) (*abci.ResponseEndBlock, error) {
-	return nil, fmt.Errorf("EndBlock no longer supported")
 }
