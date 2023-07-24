@@ -1,4 +1,5 @@
 #!/bin/bash
+cd ..
 echo $PWD
 echo "running ls:"
 ls
