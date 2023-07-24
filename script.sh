@@ -1,11 +1,13 @@
 #!/bin/bash
-/bin/bash ~/.bashrc
+echo $PWD
+echo "running ls:"
+ls
 apt update
 apt install jq -y
 curl https://get.ignite.com/cli@v0.26.1! | bash
 ignite scaffold chain gm --address-prefix gm
 cd gm
-go mod edit -replace github.com/cosmos/cosmos-sdk=../
+go mod edit -replace github.com/cosmos/cosmos-sdk=/cosmos-sdk
 go mod edit -replace github.com/tendermint/tendermint=github.com/rollkit/cometbft@v0.0.0-20230524013049-75272ebaee38
 go mod tidy
 go mod download
