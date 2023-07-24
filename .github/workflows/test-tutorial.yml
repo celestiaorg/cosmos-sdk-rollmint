@@ -1,10 +1,19 @@
 name: Test GM Tutorial
-on: workflow_dispatch
+on: push
 
 permissions:
   contents: read
 
 jobs:
     test:
-        runs-on: golang:1.20.3
+        runs-on: ubuntu-latest
         steps:
+          - name: Checkout repository
+            uses: actions/checkout@v3
+          - name: Run GM tutorial in docker-compose
+            uses: isbang/compose-action@v1.5.0
+            with:
+              compose-file: "./gmbuilder-docker-compose.yml"
+              up-flags: "--build"
+          - name: Test the GM tutorial
+            run: ./script.sh

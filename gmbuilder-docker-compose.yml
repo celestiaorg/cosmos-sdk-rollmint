@@ -16,8 +16,8 @@ services:
     build:
       context: .
       dockerfile: gmbuilder.Dockerfile
-    environment:
-      COSMOS_CHECKOUT: "c615611b4"
     depends_on:
       celestia:
         condition: service_healthy
+    ports:
+      - "36657:26657"
