@@ -1,4 +1,5 @@
 #!/bin/bash
+/bin/bash ~/.bashrc
 apt update
 apt install jq -y
 curl https://get.ignite.com/cli@v0.26.1! | bash
