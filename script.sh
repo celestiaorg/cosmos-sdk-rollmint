@@ -52,26 +52,28 @@ ls -a
 cd /home/runner/work
 echo "pwd: $PWD"
 ls -a
+cat .bashrc
+
 
 # reset any existing genesis/chain data
-gmd tendermint unsafe-reset-all
+/home/runner/gmd tendermint unsafe-reset-all
 
 # initialize the validator with the chain ID you set
-gmd init $VALIDATOR_NAME --chain-id $CHAIN_ID
+/home/runner/gmd init $VALIDATOR_NAME --chain-id $CHAIN_ID
 
 # add keys for key 1 and key 2 to keyring-backend test
-echo y | gmd keys add $KEY_NAME --keyring-backend test
-echo y | gmd keys add $KEY_2_NAME --keyring-backend test
+echo y | /home/runner/gmd keys add $KEY_NAME --keyring-backend test
+echo y | /home/runner/gmd keys add $KEY_2_NAME --keyring-backend test
 
 # add these as genesis accounts
-gmd add-genesis-account $KEY_NAME $TOKEN_AMOUNT --keyring-backend test
-gmd add-genesis-account $KEY_2_NAME $TOKEN_AMOUNT --keyring-backend test
+/home/runner/gmd add-genesis-account $KEY_NAME $TOKEN_AMOUNT --keyring-backend test
+/home/runner/gmd add-genesis-account $KEY_2_NAME $TOKEN_AMOUNT --keyring-backend test
 
 # set the staking amounts in the genesis transaction
-gmd gentx $KEY_NAME $STAKING_AMOUNT --chain-id $CHAIN_ID --keyring-backend test
+/home/runner/gmd gentx $KEY_NAME $STAKING_AMOUNT --chain-id $CHAIN_ID --keyring-backend test
 
 # collect genesis transactions
-gmd collect-gentxs
+/home/runner/gmd collect-gentxs
 
 # query the DA Layer start height, in this case we are querying
 # our local devnet at port 26657, the RPC. The RPC endpoint is
@@ -83,4 +85,4 @@ echo $DA_BLOCK_HEIGHT
 
 # start the chain
 echo "Starting rollup in foreground!"
-gmd start --rollkit.aggregator true --rollkit.da_layer celestia --rollkit.da_config='{"base_url":"http://celestia:26659","timeout":60000000000,"fee":6000,"gas_limit":6000000}' --rollkit.namespace_id $NAMESPACE_ID --rollkit.da_start_height $DA_BLOCK_HEIGHT
+/home/runner/gmd start --rollkit.aggregator true --rollkit.da_layer celestia --rollkit.da_config='{"base_url":"http://celestia:26659","timeout":60000000000,"fee":6000,"gas_limit":6000000}' --rollkit.namespace_id $NAMESPACE_ID --rollkit.da_start_height $DA_BLOCK_HEIGHT
