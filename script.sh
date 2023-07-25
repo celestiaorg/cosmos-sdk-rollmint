@@ -46,6 +46,12 @@ echo "trying to go to home..."
 cd /home/
 echo "did it work? $PWD"
 ls -a
+cd /home/runner/
+echo "pwd: $PWD"
+ls -a
+cd /home/runner/work
+echo "pwd: $PWD"
+ls -a
 
 # reset any existing genesis/chain data
 gmd tendermint unsafe-reset-all
