@@ -42,6 +42,10 @@ ls -a
 echo "going into gm"
 cd gm
 ls -a
+echo "trying to go to home..."
+cd /home/
+echo "did it work? $PWD"
+ls -a
 
 # reset any existing genesis/chain data
 gmd tendermint unsafe-reset-all
