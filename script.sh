@@ -33,7 +33,16 @@ echo "running ls -a"
 ls -a
 echo "going back 1"
 cd ..
+echo "PWD is:"
+echo $PWD
 ls -a
+echo "going into cosmos-sdk"
+cd cosmos-sdk
+ls -a
+echo "going into gm"
+cd gm
+ls -a
+
 # reset any existing genesis/chain data
 gmd tendermint unsafe-reset-all
 
