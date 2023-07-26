@@ -20,6 +20,8 @@ while [[ $RETRY_COUNT -lt $MAX_RETRIES ]]; do
     echo "Success! The result is now different from the error"
     echo "got result:"
     echo $RESULT
+    echo "but we expected this:"
+    echo $EXPECTED_RESULT
     if [ -z "$RESULT" ]; then
       echo "Result is null. not good"
     else
