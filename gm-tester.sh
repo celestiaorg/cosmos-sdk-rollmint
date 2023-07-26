@@ -15,7 +15,7 @@ while [[ $RETRY_COUNT -lt $MAX_RETRIES ]]; do
   RESULT=$(curl -s "$URL" | jq '.result')
 
   # Compare the result with the expected string or null string
-  if ["$RESULT" != "null"]; then
+  if [["$RESULT" != "null"]]; then
     echo "Success! The result is now not null. Specifically, it's:"
     echo $RESULT
     exit 0
