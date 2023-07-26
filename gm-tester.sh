@@ -1,6 +1,4 @@
 URL=localhost:26657/block\?height=3
-EXPECTED_RESULT='{"jsonrpc":"2.0","error":{"code":-32603,"message":"","data":"failed to load hash from index: failed to load block hash for height: datastore: key not found"},"id":-1}'
-EXPECTED_RESULT="${EXPECTED_RESULT#"${EXPECTED_RESULT%%[![:space:]]*}"}"
 
 # Define the maximum number of retries
 MAX_RETRIES=50
@@ -14,26 +12,16 @@ RETRY_COUNT=0
 # Loop until the result is not equal to the expected string or maximum retries are reached
 while [[ $RETRY_COUNT -lt $MAX_RETRIES ]]; do
   # Execute the curl command and capture the result
-  RESULT=$(curl -s "$URL")
-  RESULT="${RESULT#"${RESULT%%[![:space:]]*}"}"
+  RESULT=$(curl -s "$URL" | jq '.result')
 
   # Compare the result with the expected string or null string
-  if [[ "$RESULT" != "$EXPECTED_RESULT" && -n "$RESULT" ]]; then
-    echo "Success! The result is now different from the error"
-    echo "got result:"
+  if ["$RESULT" != "null"]; then
+    echo "Success! The result is now not null. Specifically, it's:"
     echo $RESULT
-    echo "but we expected this:"
-    echo $EXPECTED_RESULT
-    if [ -z "$RESULT" ]; then
-      echo "Result is null. not good"
-    else
-      echo "result is NOT NULL"
-    fi
     exit 0
     break
   fi
-  echo "EXPECTED " $EXPECTED_RESULT
-  echo "GOT " $RESULT
+  echo "i think the result is null."
 
   # Increment the retry count
   ((RETRY_COUNT++))
