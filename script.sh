@@ -1,7 +1,7 @@
 #!/bin/bash
 cd ..
-apt update
-apt install jq -y
+sudo apt-get update
+sudo apt-get install jq -y
 curl https://get.ignite.com/cli@v0.26.1! | bash
 ignite scaffold chain gm --address-prefix gm
 cd gm
