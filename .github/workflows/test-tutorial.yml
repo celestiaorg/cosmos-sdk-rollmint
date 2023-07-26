@@ -16,4 +16,4 @@ jobs:
               compose-file: "./gmbuilder-docker-compose.yml"
               up-flags: "--build"
           - name: Test the GM tutorial
-            run: ./script.sh
+            run: ./gm-tester.sh
