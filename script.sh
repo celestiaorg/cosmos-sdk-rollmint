@@ -1,8 +1,5 @@
 #!/bin/bash
 cd ..
-echo $PWD
-echo "running ls:"
-ls
 apt update
 apt install jq -y
 curl https://get.ignite.com/cli@v0.26.1! | bash
@@ -27,34 +24,6 @@ echo $NAMESPACE_ID
 
 # build the gm chain with Rollkit
 ignite chain build
-echo "PWD is:"
-echo $PWD
-echo "running ls -a"
-ls -a
-echo "going back 1"
-cd ..
-echo "PWD is:"
-echo $PWD
-ls -a
-echo "going into cosmos-sdk"
-cd cosmos-sdk
-ls -a
-echo "going into gm"
-cd gm
-ls -a
-echo "trying to go to home..."
-cd /home/
-echo "did it work? $PWD"
-ls -a
-cd /home/runner/
-echo "pwd: $PWD"
-ls -a
-cd /home/runner/work
-echo "pwd: $PWD"
-ls -a
-cat .bashrc
-
-
 # reset any existing genesis/chain data
 /home/runner/go/bin/gmd tendermint unsafe-reset-all
 
