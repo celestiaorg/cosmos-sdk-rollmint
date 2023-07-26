@@ -16,21 +16,11 @@ while [[ $RETRY_COUNT -lt $MAX_RETRIES ]]; do
 
   # Compare the result with the expected string or null string
   if jq -e '.result' <<< "$RESULT" > /dev/null; then
-    echo "Success! The result is now different from the error"
-    echo "got result:"
+    echo "Rollup has produced block #3:"
     echo $RESULT
-    echo "but we expected this:"
-    echo $EXPECTED_RESULT
-    if [ -z "$RESULT" ]; then
-      echo "Result is null. not good"
-    else
-      echo "result is NOT NULL"
-    fi
     exit 0
     break
   fi
-  echo "EXPECTED " $EXPECTED_RESULT
-  echo "GOT " $RESULT
 
   # Increment the retry count
   ((RETRY_COUNT++))
