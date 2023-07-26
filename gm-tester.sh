@@ -12,7 +12,7 @@ RETRY_COUNT=0
 # Loop until the result is not equal to the expected string or maximum retries are reached
 while [[ $RETRY_COUNT -lt $MAX_RETRIES ]]; do
   # Execute the curl command and capture the result
-  RESULT=$(curl -s "$URL" | jq '.result')
+  RESULT=$(curl -s "$URL" | jq -r '.result')
 
   # Compare the result with the expected string or null string
   if [["$RESULT" != "null"]]; then
