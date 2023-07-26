@@ -18,7 +18,13 @@ while [[ $RETRY_COUNT -lt $MAX_RETRIES ]]; do
   # Compare the result with the expected string or null string
   if [[ "$RESULT" != "$EXPECTED_RESULT" && -n "$RESULT" ]]; then
     echo "Success! The result is now different from the error"
+    echo "got result:"
     echo $RESULT
+    if [ -z "$RESULT" ]; then
+      echo "Result is null. not good"
+    else
+      echo "result is NOT NULL"
+    fi
     exit 0
     break
   fi
