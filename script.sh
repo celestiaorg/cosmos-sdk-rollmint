@@ -25,24 +25,26 @@ echo $NAMESPACE_ID
 # build the gm chain with Rollkit
 ignite chain build
 # reset any existing genesis/chain data
-/home/runner/go/bin/gmd tendermint unsafe-reset-all
+#/home/runner/go/bin/gmd tendermint unsafe-reset-all
+gmd tendermint unsafe-reset-all
 
 # initialize the validator with the chain ID you set
-/home/runner/go/bin/gmd init $VALIDATOR_NAME --chain-id $CHAIN_ID
+#/home/runner/go/bin/gmd init $VALIDATOR_NAME --chain-id $CHAIN_ID
+gmd init $VALIDATOR_NAME --chain-id $CHAIN_ID
 
 # add keys for key 1 and key 2 to keyring-backend test
 echo y | /home/runner/go/bin/gmd keys add $KEY_NAME --keyring-backend test
 echo y | /home/runner/go/bin/gmd keys add $KEY_2_NAME --keyring-backend test
 
 # add these as genesis accounts
-/home/runner/go/bin/gmd add-genesis-account $KEY_NAME $TOKEN_AMOUNT --keyring-backend test
-/home/runner/go/bin/gmd add-genesis-account $KEY_2_NAME $TOKEN_AMOUNT --keyring-backend test
+gmd add-genesis-account $KEY_NAME $TOKEN_AMOUNT --keyring-backend test
+gmd add-genesis-account $KEY_2_NAME $TOKEN_AMOUNT --keyring-backend test
 
 # set the staking amounts in the genesis transaction
-/home/runner/go/bin/gmd gentx $KEY_NAME $STAKING_AMOUNT --chain-id $CHAIN_ID --keyring-backend test
+gmd gentx $KEY_NAME $STAKING_AMOUNT --chain-id $CHAIN_ID --keyring-backend test
 
 # collect genesis transactions
-/home/runner/go/bin/gmd collect-gentxs
+gmd collect-gentxs
 
 # query the DA Layer start height, in this case we are querying
 # our local devnet at port 26657, the RPC. The RPC endpoint is
