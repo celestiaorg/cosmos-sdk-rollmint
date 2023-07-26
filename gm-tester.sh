@@ -12,16 +12,25 @@ RETRY_COUNT=0
 # Loop until the result is not equal to the expected string or maximum retries are reached
 while [[ $RETRY_COUNT -lt $MAX_RETRIES ]]; do
   # Execute the curl command and capture the result
-  RESULT=$(curl -s "$URL" | jq -r '.result')
+  RESULT=$(curl -s "$URL")
 
   # Compare the result with the expected string or null string
-  if [["$RESULT" != "null"]]; then
-    echo "Success! The result is now not null. Specifically, it's:"
+  if jq -e '.result' <<< "$RESULT" > /dev/null; then
+    echo "Success! The result is now different from the error"
+    echo "got result:"
     echo $RESULT
+    echo "but we expected this:"
+    echo $EXPECTED_RESULT
+    if [ -z "$RESULT" ]; then
+      echo "Result is null. not good"
+    else
+      echo "result is NOT NULL"
+    fi
     exit 0
     break
   fi
-  echo "i think the result is null."
+  echo "EXPECTED " $EXPECTED_RESULT
+  echo "GOT " $RESULT
 
   # Increment the retry count
   ((RETRY_COUNT++))
