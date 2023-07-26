@@ -1,5 +1,6 @@
 URL=localhost:26657/block\?height=3
 EXPECTED_RESULT='{"jsonrpc":"2.0","error":{"code":-32603,"message":"","data":"failed to load hash from index: failed to load block hash for height: datastore: key not found"},"id":-1}'
+EXPECTED_RESULT="${EXPECTED_RESULT#"${EXPECTED_RESULT%%[![:space:]]*}"}"
 
 # Define the maximum number of retries
 MAX_RETRIES=50
@@ -14,6 +15,7 @@ RETRY_COUNT=0
 while [[ $RETRY_COUNT -lt $MAX_RETRIES ]]; do
   # Execute the curl command and capture the result
   RESULT=$(curl -s "$URL")
+  RESULT="${RESULT#"${RESULT%%[![:space:]]*}"}"
 
   # Compare the result with the expected string or null string
   if [[ "$RESULT" != "$EXPECTED_RESULT" && -n "$RESULT" ]]; then
