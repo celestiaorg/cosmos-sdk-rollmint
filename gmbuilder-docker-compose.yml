@@ -1,0 +1,23 @@
+version: "3.9"
+services:
+  celestia:
+    image: ghcr.io/rollkit/local-celestia-devnet:latest
+    # Rollup can't start until after DA starts.
+    # This ensures it waits 5 seconds so the rollup can query it.
+    ports:
+      - "26657:26657"
+      - "26659:26659"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:26657/block?height=1"]
+      interval: 5s
+      timeout: 10s
+      retries: 5
+  gm:
+    build:
+      context: .
+      dockerfile: gmbuilder.Dockerfile
+    depends_on:
+      celestia:
+        condition: service_healthy
+    ports:
+      - "36657:26657"
