@@ -1,3 +1,4 @@
+#!/bin/sh
 URL=localhost:26657/block\?height=3
 
 # Define the maximum number of retries
