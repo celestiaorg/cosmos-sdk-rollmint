@@ -4,6 +4,5 @@ WORKDIR /
 
 ADD ./ /cosmos-sdk/
 
-COPY script.sh /script.sh
-RUN chmod +x /script.sh
+COPY --chmod=+x script.sh /script.sh
 ENTRYPOINT /bin/bash /script.sh
