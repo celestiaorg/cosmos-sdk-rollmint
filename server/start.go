@@ -12,11 +12,9 @@ import (
 	"github.com/cometbft/cometbft/abci/server"
 	cmtcmd "github.com/cometbft/cometbft/cmd/cometbft/commands"
 	cmtcfg "github.com/cometbft/cometbft/config"
-	"github.com/cometbft/cometbft/node"
 	"github.com/cometbft/cometbft/p2p"
 	pvm "github.com/cometbft/cometbft/privval"
 	"github.com/cometbft/cometbft/proxy"
-	"github.com/cometbft/cometbft/rpc/client/local"
 	cmttypes "github.com/cometbft/cometbft/types"
 	dbm "github.com/cosmos/cosmos-db"
 	"github.com/hashicorp/go-metrics"
@@ -40,6 +38,11 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/mempool"
 	"github.com/cosmos/cosmos-sdk/version"
 	genutiltypes "github.com/cosmos/cosmos-sdk/x/genutil/types"
+
+	rollconf "github.com/rollkit/rollkit/config"
+	rollconv "github.com/rollkit/rollkit/conv"
+	rollnode "github.com/rollkit/rollkit/node"
+	rollrpc "github.com/rollkit/rollkit/rpc"
 )
 
 const (
@@ -299,7 +302,7 @@ func startInProcess(svrCtx *Context, svrCfg serverconfig.Config, clientCtx clien
 		svrCfg.GRPC.Enable = true
 	} else {
 		svrCtx.Logger.Info("starting node with ABCI CometBFT in-process")
-		tmNode, cleanupFn, err := startCmtNode(ctx, cmtCfg, app, svrCtx)
+		server, cleanupFn, err := startCmtNode(ctx, cmtCfg, app, svrCtx)
 		if err != nil {
 			return err
 		}
@@ -311,7 +314,7 @@ func startInProcess(svrCtx *Context, svrCfg serverconfig.Config, clientCtx clien
 		if svrCfg.API.Enable || svrCfg.GRPC.Enable {
 			// Re-assign for making the client available below do not use := to avoid
 			// shadowing the clientCtx variable.
-			clientCtx = clientCtx.WithClient(local.New(tmNode))
+			clientCtx = clientCtx.WithClient(server.Client())
 
 			app.RegisterTxService(clientCtx)
 			app.RegisterTendermintService(clientCtx)
@@ -346,30 +349,65 @@ func startCmtNode(
 	cfg *cmtcfg.Config,
 	app types.Application,
 	svrCtx *Context,
-) (tmNode *node.Node, cleanupFn func(), err error) {
+) (server *rollrpc.Server, cleanupFn func(), err error) {
 	nodeKey, err := p2p.LoadOrGenNodeKey(cfg.NodeKeyFile())
 	if err != nil {
 		return nil, cleanupFn, err
 	}
 
+	svrCtx.Logger.Info("starting node with Rollkit in-process")
+
+	pval := pvm.LoadOrGenFilePV(cfg.PrivValidatorKeyFile(), cfg.PrivValidatorStateFile())
+
+	//keys in Rollkit format
+	p2pKey, err := rollconv.GetNodeKey(nodeKey)
+	if err != nil {
+		return nil, cleanupFn, err
+	}
+
+	signingKey, err := rollconv.GetNodeKey(&p2p.NodeKey{PrivKey: pval.Key.PrivKey})
+	if err != nil {
+		return nil, cleanupFn, err
+	}
+
+	nodeConfig := rollconf.NodeConfig{}
+	err = nodeConfig.GetViperConfig(svrCtx.Viper)
+	if err != nil {
+		return nil, cleanupFn, err
+	}
+	rollconv.GetNodeConfig(&nodeConfig, cfg)
+	err = rollconv.TranslateAddresses(&nodeConfig)
+	if err != nil {
+		return nil, cleanupFn, err
+	}
+
+	genDoc, err := getGenDocProvider(cfg)()
+	if err != nil {
+		return nil, cleanupFn, err
+	}
+
 	cmtApp := NewCometABCIWrapper(app)
-	tmNode, err = node.NewNodeWithContext(
+	tmNode, err := rollnode.NewNode(
 		ctx,
-		cfg,
-		pvm.LoadOrGenFilePV(cfg.PrivValidatorKeyFile(), cfg.PrivValidatorStateFile()),
-		nodeKey,
+		nodeConfig,
+		p2pKey,
+		signingKey,
 		proxy.NewLocalClientCreator(cmtApp),
-		getGenDocProvider(cfg),
-		cmtcfg.DefaultDBProvider,
-		node.DefaultMetricsProvider(cfg.Instrumentation),
+		genDoc,
 		servercmtlog.CometLoggerWrapper{Logger: svrCtx.Logger},
 	)
 	if err != nil {
-		return tmNode, cleanupFn, err
+		return nil, cleanupFn, err
+	}
+
+	server = rollrpc.NewServer(tmNode, cfg.RPC, servercmtlog.CometLoggerWrapper{Logger: svrCtx.Logger})
+	err = server.Start()
+	if err != nil {
+		return nil, cleanupFn, err
 	}
 
 	if err := tmNode.Start(); err != nil {
-		return tmNode, cleanupFn, err
+		return nil, cleanupFn, err
 	}
 
 	cleanupFn = func() {
@@ -379,7 +417,7 @@ func startCmtNode(
 		}
 	}
 
-	return tmNode, cleanupFn, nil
+	return server, cleanupFn, nil
 }
 
 func getAndValidateConfig(svrCtx *Context) (serverconfig.Config, error) {
