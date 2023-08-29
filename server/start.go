@@ -224,6 +224,7 @@ is performed. Note, when enabled, gRPC will also be automatically enabled.
 
 	// add support for all CometBFT-specific command line options
 	cmtcmd.AddNodeFlags(cmd)
+	rollconf.AddFlags(cmd)
 
 	if opts.AddFlags != nil {
 		opts.AddFlags(cmd)
